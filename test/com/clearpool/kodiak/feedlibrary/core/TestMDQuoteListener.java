@@ -12,7 +12,7 @@ public class TestMDQuoteListener implements IMdQuoteListener
 	private final Queue<Quote> queue = new LinkedList<Quote>();
 
 	@Override
-	public void quoteReceived(Quote quote, int channel)
+	public void quoteReceived(Quote quote, int channel, int index)
 	{
 		this.queue.add(quote);
 	}

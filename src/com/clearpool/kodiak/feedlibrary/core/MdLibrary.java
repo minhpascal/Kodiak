@@ -47,7 +47,7 @@ public class MdLibrary
 				String line = this.lines[i];
 				int lineInt = Integer.parseInt(line);
 				MdProcessor processor = new MdProcessor(this.feed, line, this.interfaceA, this.interfaceB, createNormalizer(this.feed,
-						MdFeedProps.getProperty(this.feed.toString(), line, MdFeedProps.RANGE), lineInt));
+						MdFeedProps.getProperty(this.feed.toString(), line, MdFeedProps.RANGE), lineInt, i));
 				this.mdProcessors[i] = processor;
 				if (this.context.readFromSocket()) processor.registerWithSocketSelector(this.context.getSocketSelectorForLine(lineInt));
 				else processor.registerWithFileSelector(this.readFromDir, this.context.getFileSelectorForLine(lineInt));
@@ -60,13 +60,14 @@ public class MdLibrary
 	}
 
 	// Helper
-	private IMdNormalizer createNormalizer(MdFeed normalizerFeed, String range, int channel)
+	private IMdNormalizer createNormalizer(MdFeed normalizerFeed, String range, int channel, int index)
 	{
 		String className = MdFeedProps.getProperty(normalizerFeed.toString(), MdFeedProps.NORMALIZER);
 		if (className == null || className.isEmpty()) return null;
 		try
 		{
-			return (IMdNormalizer) Class.forName(className).getConstructor(Map.class, String.class, int.class).newInstance(this.callbacks, range, Integer.valueOf(channel));
+			return (IMdNormalizer) Class.forName(className).getConstructor(Map.class, String.class, int.class, int.class)
+					.newInstance(this.callbacks, range, Integer.valueOf(channel), Integer.valueOf(index));
 		}
 		catch (Exception e)
 		{

@@ -16,6 +16,7 @@ public class CtaPacket extends MdFeedPacket
 	private char messageNetwork;
 	private char participantId;
 	private long timestamp;
+	private long participantTimestamp;
 
 	public CtaPacket(long selectionTimeNanos)
 	{
@@ -28,10 +29,23 @@ public class CtaPacket extends MdFeedPacket
 		this.messageCategory = (char) this.buffer.get();
 		this.messageType = (char) this.buffer.get();
 		this.messageNetwork = (char) this.buffer.get();
-		ByteBufferUtil.advancePosition(this.buffer, 5); // retrans requester, header id, reserved
+		ByteBufferUtil.advancePosition(this.buffer, 2); // retrans requester
+		char headerIdentifier = (char) this.buffer.get();
+		ByteBufferUtil.advancePosition(this.buffer, 2); // transaction id part A
 		this.sequenceNumber = ByteBufferUtil.readAsciiLong(this.buffer, 9);
 		this.participantId = (char) this.buffer.get();
-		this.timestamp = readTimestamp(this.buffer);
+		if (headerIdentifier == 'B')
+		{
+			this.timestamp = readMicroSecondsSinceMidnight(this.buffer);
+			this.participantTimestamp = readMicroSecondsSinceMidnight(this.buffer); // timestamp1
+			ByteBufferUtil.advancePosition(this.buffer, 6); // timestamp2
+			ByteBufferUtil.advancePosition(this.buffer, 9); // transaction id part B
+		}
+		else
+		{
+			this.timestamp = readTimestamp(this.buffer);
+		}
+
 		this.messageCount = 1;
 	}
 
@@ -42,6 +56,13 @@ public class CtaPacket extends MdFeedPacket
 		int seconds = buffer.get() - '0';
 		long millis = ByteBufferUtil.readAsciiLong(buffer, 3);
 		return TODAY + (hours * DateUtil.MILLIS_PER_HOUR) + (mins * DateUtil.MILLIS_PER_MINUTE) + (seconds * DateUtil.MILLIS_PER_SECOND) + millis;
+	}
+
+	private static long readMicroSecondsSinceMidnight(ByteBuffer buffer)
+	{
+		long microsSinceMidnight = ByteBufferUtil.readBase95Long(buffer, 6);
+		long millisSinceMidnight = microsSinceMidnight / 1000;
+		return TODAY + millisSinceMidnight;
 	}
 
 	public char getMessageCategory()
@@ -67,6 +88,11 @@ public class CtaPacket extends MdFeedPacket
 	public long getTimestamp()
 	{
 		return this.timestamp;
+	}
+
+	public long getParticipantTimestamp()
+	{
+		return this.participantTimestamp;
 	}
 
 	@Override

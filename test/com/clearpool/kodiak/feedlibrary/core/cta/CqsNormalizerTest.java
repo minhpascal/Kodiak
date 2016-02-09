@@ -6,7 +6,6 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,7 +48,7 @@ public class CqsNormalizerTest
 		callbacks.put(MdServiceType.BBO, this.bboListener);
 		callbacks.put(MdServiceType.NBBO, this.nbboListener);
 		callbacks.put(MdServiceType.STATE, this.stateListener);
-		this.normalizer = new CqsNormalizer(callbacks, "", 0) {
+		this.normalizer = new CqsNormalizer(callbacks, "", 0, 0) {
 			@Override
 			public MarketSession getMarketSession(char primaryListing, boolean isPrimaryListing, long timestamp)
 			{
@@ -131,13 +130,23 @@ public class CqsNormalizerTest
 			assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, c);
 		}
 
-		char[] quoteConditions2 = { 'C', 'G', 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
+		char[] quoteConditions2 = { 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
 		for (char c : quoteConditions2)
 		{
 			this.normalizer.processMessage("TEST",
 					createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', c, ' ', ' ', ' ', '4', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
 			assertSizes(0, 1, 1);
 			assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+			assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, c);
+		}
+
+		char[] quoteConditions25 = { 'C' };
+		for (char c : quoteConditions25)
+		{
+			this.normalizer.processMessage("TEST",
+					createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', c, ' ', ' ', ' ', '4', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
+			assertSizes(0, 1, 1);
+			assertBBO("IBM", 8194, 190, 191, 0, 0, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
 			assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, c);
 		}
 
@@ -159,11 +168,11 @@ public class CqsNormalizerTest
 		}
 
 		this.normalizer.processMessage("TEST",
-				createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', 'M', ' ', ' ', ' ', '4', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
+				createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', 'R', ' ', ' ', ' ', '4', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
 		assertSizes(1, 1, 1);
-		assertState("IBM", 2, MarketSession.NORMAL, TradingState.PAUSED, 190, 191);
-		assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
-		assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, 'M');
+		assertState("IBM", 2, MarketSession.NORMAL, TradingState.TRADING, 190, 191);
+		assertBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+		assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, 'R');
 	}
 
 	@Test
@@ -184,13 +193,23 @@ public class CqsNormalizerTest
 			assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, c);
 		}
 
-		char[] quoteConditions2 = { 'C', 'G', 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
+		char[] quoteConditions2 = { 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
 		for (char c : quoteConditions2)
 		{
 			this.normalizer.processMessage("TEST",
 					createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', c, ' ', ' ', ' ', '6', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
 			assertSizes(0, 1, 1);
 			assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+			assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, c);
+		}
+
+		char[] quoteConditions25 = { 'C' };
+		for (char c : quoteConditions25)
+		{
+			this.normalizer.processMessage("TEST",
+					createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', c, ' ', ' ', ' ', '6', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
+			assertSizes(0, 1, 1);
+			assertBBO("IBM", 8194, 190, 191, 0, 0, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
 			assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, c);
 		}
 
@@ -212,11 +231,11 @@ public class CqsNormalizerTest
 		}
 
 		this.normalizer.processMessage("TEST",
-				createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', 'M', ' ', ' ', ' ', '6', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
+				createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', 'R', ' ', ' ', ' ', '6', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
 		assertSizes(1, 1, 1);
-		assertState("IBM", 2, MarketSession.NORMAL, TradingState.PAUSED, 190, 191);
-		assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
-		assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, 'M');
+		assertState("IBM", 2, MarketSession.NORMAL, TradingState.TRADING, 190, 191);
+		assertBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+		assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, 'R');
 	}
 
 	@Test
@@ -237,13 +256,23 @@ public class CqsNormalizerTest
 			assertNBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, c);
 		}
 
-		char[] quoteConditions2 = { 'C', 'G', 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
+		char[] quoteConditions2 = { 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
 		for (char c : quoteConditions2)
 		{
 			this.normalizer.processMessage("TEST",
 					createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', c, ' ', ' ', ' ', '1', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
 			assertSizes(0, 1, 1);
 			assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+			assertNBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, c);
+		}
+
+		char[] quoteConditions25 = { 'C' };
+		for (char c : quoteConditions25)
+		{
+			this.normalizer.processMessage("TEST",
+					createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', c, ' ', ' ', ' ', '1', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
+			assertSizes(0, 1, 1);
+			assertBBO("IBM", 8194, 190, 191, 0, 0, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
 			assertNBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, c);
 		}
 
@@ -265,11 +294,11 @@ public class CqsNormalizerTest
 		}
 
 		this.normalizer.processMessage("TEST",
-				createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', 'M', ' ', ' ', ' ', '1', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
+				createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', 'R', ' ', ' ', ' ', '1', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
 		assertSizes(1, 1, 1);
-		assertState("IBM", 2, MarketSession.NORMAL, TradingState.PAUSED, 190, 191);
-		assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
-		assertNBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, 'M');
+		assertState("IBM", 2, MarketSession.NORMAL, TradingState.TRADING, 190, 191);
+		assertBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+		assertNBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, 'R');
 	}
 
 	@Test
@@ -299,13 +328,23 @@ public class CqsNormalizerTest
 			assertNBBO("IBM", 2, 0, 0, 0, 0, null, null, c);
 		}
 
-		char[] quoteConditions2 = { 'C', 'G', 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
+		char[] quoteConditions2 = { 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
 		for (char c : quoteConditions2)
 		{
 			this.normalizer.processMessage("TEST",
 					createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', c, ' ', ' ', ' ', '2', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
 			assertSizes(0, 1, 1);
 			assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+			assertNBBO("IBM", 2, 0, 0, 0, 0, null, null, c);
+		}
+
+		char[] quoteConditions25 = { 'C' };
+		for (char c : quoteConditions25)
+		{
+			this.normalizer.processMessage("TEST",
+					createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', c, ' ', ' ', ' ', '2', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
+			assertSizes(0, 1, 1);
+			assertBBO("IBM", 8194, 190, 191, 0, 0, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
 			assertNBBO("IBM", 2, 0, 0, 0, 0, null, null, c);
 		}
 
@@ -327,11 +366,11 @@ public class CqsNormalizerTest
 		}
 
 		this.normalizer.processMessage("TEST",
-				createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', 'M', ' ', ' ', ' ', '2', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
+				createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', 'R', ' ', ' ', ' ', '2', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
 		assertSizes(1, 1, 1);
-		assertState("IBM", 2, MarketSession.NORMAL, TradingState.PAUSED, 190, 191);
-		assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
-		assertNBBO("IBM", 2, 0, 0, 0, 0, null, null, 'M');
+		assertState("IBM", 2, MarketSession.NORMAL, TradingState.TRADING, 190, 191);
+		assertBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+		assertNBBO("IBM", 2, 0, 0, 0, 0, null, null, 'R');
 	}
 
 	@Test
@@ -351,13 +390,22 @@ public class CqsNormalizerTest
 			assertBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
 		}
 
-		char[] quoteConditions2 = { 'C', 'G', 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
+		char[] quoteConditions2 = { 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
 		for (char c : quoteConditions2)
 		{
 			this.normalizer.processMessage("TEST",
 					createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', c, ' ', ' ', ' ', '0', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
 			assertSizes(0, 1, 0);
 			assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+		}
+
+		char[] quoteConditions25 = { 'C' };
+		for (char c : quoteConditions25)
+		{
+			this.normalizer.processMessage("TEST",
+					createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', c, ' ', ' ', ' ', '0', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
+			assertSizes(0, 1, 0);
+			assertBBO("IBM", 8194, 190, 191, 0, 0, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
 		}
 
 		this.normalizer.processMessage("TEST",
@@ -376,10 +424,10 @@ public class CqsNormalizerTest
 		}
 
 		this.normalizer.processMessage("TEST",
-				createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', 'M', ' ', ' ', ' ', '0', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
+				createCtaPacket(createEquityLongQuote("IBM", 'N', 190, 191, 2, 3, 'E', 'N', 'R', ' ', ' ', ' ', '0', ' ', 190.01, 190.99, 1, 4, 'Y')), false);
 		assertSizes(1, 1, 0);
-		assertState("IBM", 2, MarketSession.NORMAL, TradingState.PAUSED, 190, 191);
-		assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+		assertState("IBM", 2, MarketSession.NORMAL, TradingState.TRADING, 190, 191);
+		assertBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
 	}
 
 	@Test
@@ -398,12 +446,21 @@ public class CqsNormalizerTest
 			assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, c);
 		}
 
-		char[] quoteConditions2 = { 'C', 'G', 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
+		char[] quoteConditions2 = { 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
 		for (char c : quoteConditions2)
 		{
 			this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', c, ' ', '4', 190.01, 190.99, 1, 4, 'Y')), false);
 			assertSizes(0, 1, 1);
 			assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+			assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, c);
+		}
+
+		char[] quoteConditions25 = { 'C' };
+		for (char c : quoteConditions25)
+		{
+			this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', c, ' ', '4', 190.01, 190.99, 1, 4, 'Y')), false);
+			assertSizes(0, 1, 1);
+			assertBBO("IBM", 8194, 190, 191, 0, 0, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
 			assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, c);
 		}
 
@@ -422,11 +479,11 @@ public class CqsNormalizerTest
 			assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, c);
 		}
 
-		this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', 'M', ' ', '4', 190.01, 190.99, 1, 4, 'Y')), false);
+		this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', 'R', ' ', '4', 190.01, 190.99, 1, 4, 'Y')), false);
 		assertSizes(1, 1, 1);
-		assertState("IBM", 2, MarketSession.NORMAL, TradingState.PAUSED, 190, 191);
-		assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
-		assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, 'M');
+		assertState("IBM", 2, MarketSession.NORMAL, TradingState.TRADING, 190, 191);
+		assertBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+		assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, 'R');
 	}
 
 	@Test
@@ -445,12 +502,21 @@ public class CqsNormalizerTest
 			assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, c);
 		}
 
-		char[] quoteConditions2 = { 'C', 'G', 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
+		char[] quoteConditions2 = { 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
 		for (char c : quoteConditions2)
 		{
 			this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', c, ' ', '6', 190.01, 190.99, 1, 4, 'Y')), false);
 			assertSizes(0, 1, 1);
 			assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+			assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, c);
+		}
+
+		char[] quoteConditions25 = { 'C' };
+		for (char c : quoteConditions25)
+		{
+			this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', c, ' ', '6', 190.01, 190.99, 1, 4, 'Y')), false);
+			assertSizes(0, 1, 1);
+			assertBBO("IBM", 8194, 190, 191, 0, 0, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
 			assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, c);
 		}
 
@@ -469,11 +535,11 @@ public class CqsNormalizerTest
 			assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, c);
 		}
 
-		this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', 'M', ' ', '6', 190.01, 190.99, 1, 4, 'Y')), false);
+		this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', 'R', ' ', '6', 190.01, 190.99, 1, 4, 'Y')), false);
 		assertSizes(1, 1, 1);
-		assertState("IBM", 2, MarketSession.NORMAL, TradingState.PAUSED, 190, 191);
-		assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
-		assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, 'M');
+		assertState("IBM", 2, MarketSession.NORMAL, TradingState.TRADING, 190, 191);
+		assertBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+		assertNBBO("IBM", 2, 190.01, 190.99, 100, 400, Exchange.USEQ_BATS_Y_EXCHANGE, Exchange.USEQ_BATS_Y_EXCHANGE, 'R');
 
 	}
 
@@ -493,12 +559,21 @@ public class CqsNormalizerTest
 			assertNBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, c);
 		}
 
-		char[] quoteConditions2 = { 'C', 'G', 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
+		char[] quoteConditions2 = { 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
 		for (char c : quoteConditions2)
 		{
 			this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', c, ' ', '1', 190.01, 190.99, 1, 4, 'Y')), false);
 			assertSizes(0, 1, 1);
 			assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+			assertNBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, c);
+		}
+
+		char[] quoteConditions25 = { 'C' };
+		for (char c : quoteConditions25)
+		{
+			this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', c, ' ', '1', 190.01, 190.99, 1, 4, 'Y')), false);
+			assertSizes(0, 1, 1);
+			assertBBO("IBM", 8194, 190, 191, 0, 0, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
 			assertNBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, c);
 		}
 
@@ -517,11 +592,11 @@ public class CqsNormalizerTest
 			assertNBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, c);
 		}
 
-		this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', 'M', ' ', '1', 190.01, 190.99, 1, 4, 'Y')), false);
+		this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', 'R', ' ', '1', 190.01, 190.99, 1, 4, 'Y')), false);
 		assertSizes(1, 1, 1);
-		assertState("IBM", 2, MarketSession.NORMAL, TradingState.PAUSED, 190, 191);
-		assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
-		assertNBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, 'M');
+		assertState("IBM", 2, MarketSession.NORMAL, TradingState.TRADING, 190, 191);
+		assertBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+		assertNBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, 'R');
 	}
 
 	@Test
@@ -540,12 +615,21 @@ public class CqsNormalizerTest
 			assertNBBO("IBM", 2, 0, 0, 0, 0, null, null, c);
 		}
 
-		char[] quoteConditions2 = { 'C', 'G', 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
+		char[] quoteConditions2 = { 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
 		for (char c : quoteConditions2)
 		{
 			this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', c, ' ', '2', 190.01, 190.99, 1, 4, 'Y')), false);
 			assertSizes(0, 1, 1);
 			assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+			assertNBBO("IBM", 2, 0, 0, 0, 0, null, null, c);
+		}
+
+		char[] quoteConditions25 = { 'C' };
+		for (char c : quoteConditions25)
+		{
+			this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', c, ' ', '2', 190.01, 190.99, 1, 4, 'Y')), false);
+			assertSizes(0, 1, 1);
+			assertBBO("IBM", 8194, 190, 191, 0, 0, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
 			assertNBBO("IBM", 2, 0, 0, 0, 0, null, null, c);
 		}
 
@@ -564,11 +648,11 @@ public class CqsNormalizerTest
 			assertNBBO("IBM", 2, 0, 0, 0, 0, null, null, c);
 		}
 
-		this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', 'M', ' ', '2', 190.01, 190.99, 1, 4, 'Y')), false);
+		this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', 'R', ' ', '2', 190.01, 190.99, 1, 4, 'Y')), false);
 		assertSizes(1, 1, 1);
-		assertState("IBM", 2, MarketSession.NORMAL, TradingState.PAUSED, 190, 191);
-		assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
-		assertNBBO("IBM", 2, 0, 0, 0, 0, null, null, 'M');
+		assertState("IBM", 2, MarketSession.NORMAL, TradingState.TRADING, 190, 191);
+		assertBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+		assertNBBO("IBM", 2, 0, 0, 0, 0, null, null, 'R');
 	}
 
 	@Test
@@ -586,12 +670,20 @@ public class CqsNormalizerTest
 			assertBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
 		}
 
-		char[] quoteConditions2 = { 'C', 'G', 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
+		char[] quoteConditions2 = { 'I', 'L', 'N', 'S', 'T', 'U', 'X', 'Y', '9' };
 		for (char c : quoteConditions2)
 		{
 			this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', c, ' ', '0', 190.01, 190.99, 1, 4, 'Y')), false);
 			assertSizes(0, 1, 0);
 			assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+		}
+
+		char[] quoteConditions25 = { 'C' };
+		for (char c : quoteConditions25)
+		{
+			this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', c, ' ', '0', 190.01, 190.99, 1, 4, 'Y')), false);
+			assertSizes(0, 1, 0);
+			assertBBO("IBM", 8194, 190, 191, 0, 0, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
 		}
 
 		this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', 'D', ' ', '0', 190.01, 190.99, 1, 4, 'Y')), false);
@@ -607,10 +699,10 @@ public class CqsNormalizerTest
 			assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
 		}
 
-		this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', 'M', ' ', '0', 190.01, 190.99, 1, 4, 'Y')), false);
+		this.normalizer.processMessage("TEST", createCtaPacket(createEquityShortQuote("IBM", 190, 191, 2, 3, 'E', 'N', 'R', ' ', '0', 190.01, 190.99, 1, 4, 'Y')), false);
 		assertSizes(1, 1, 0);
-		assertState("IBM", 2, MarketSession.NORMAL, TradingState.PAUSED, 190, 191);
-		assertBBO("IBM", 8194, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
+		assertState("IBM", 2, MarketSession.NORMAL, TradingState.TRADING, 190, 191);
+		assertBBO("IBM", 2, 190, 191, 200, 300, Exchange.USEQ_NYSE_EURONEXT, Exchange.USEQ_NYSE_EURONEXT, '\u0000');
 	}
 
 	private static CtaPacket createCtaPacket(ByteBuffer buffer)
@@ -848,16 +940,6 @@ public class CqsNormalizerTest
 	}
 
 	@Test
-	public void test_GetTradingState()
-	{
-		Set<String> ipos = new HashSet<>();
-		ipos.add("SYED");
-		Assert.assertTrue(CqsNormalizer.getTradingState('T', true, ipos, true, "SYED") == TradingState.AUCTION);
-		Assert.assertTrue(CqsNormalizer.getTradingState('X', true, ipos, true, "SYED") == TradingState.AUCTION);
-		Assert.assertTrue(CqsNormalizer.getTradingState('X', true, ipos, false, "SYED") == TradingState.TRADING);
-	}
-
-	@Test
 	public void test_GetLotSize()
 	{
 		Assert.assertEquals(new Integer(10), new Integer(this.normalizer.getLotSize("SYED")));
@@ -868,16 +950,69 @@ public class CqsNormalizerTest
 	@Test
 	public void testGetTradingState()
 	{
-		Assert.assertEquals(TradingState.TRADING, CqsNormalizer.getTradingState('P', true, new HashSet<String>(), false, "RSH"));
-		Assert.assertEquals(TradingState.TRADING, CqsNormalizer.getTradingState('K', true, new HashSet<String>(), false, "RSH"));
+		// normal market
+		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('P', true, false));
+		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('K', true, false));
+		// pre market
+		Assert.assertEquals(TradingState.TRADING, CqsNormalizer.getTradingState('P', true, true));
+		Assert.assertEquals(TradingState.TRADING, CqsNormalizer.getTradingState('K', true, true));
 
-		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('D', true, new HashSet<String>(), false, "RSH"));
-		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('J', true, new HashSet<String>(), false, "RSH"));
-		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('Q', true, new HashSet<String>(), false, "RSH"));
-		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('V', true, new HashSet<String>(), false, "RSH"));
-		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('Z', true, new HashSet<String>(), false, "RSH"));
-		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('1', true, new HashSet<String>(), false, "RSH"));
-		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('2', true, new HashSet<String>(), false, "RSH"));
-		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('3', true, new HashSet<String>(), false, "RSH"));
+		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('D', true, false));
+		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('J', true, false));
+		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('Q', true, false));
+		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('V', true, false));
+		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('Z', true, false));
+		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('1', true, false));
+		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('2', true, false));
+		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('3', true, false));
+
+		Assert.assertEquals(TradingState.HALTED, CqsNormalizer.getTradingState('M', true, false));
+		Assert.assertEquals(TradingState.AUCTION, CqsNormalizer.getTradingState('G', true, false));
+		Assert.assertEquals(TradingState.TRADING, CqsNormalizer.getTradingState('B', true, false));
+		Assert.assertEquals(TradingState.AUCTION, CqsNormalizer.getTradingState('G', true, true));
+	}
+
+	@Test
+	public void testGetMarketSession()
+	{
+		MarketState previousMarketState = new MarketState();
+		previousMarketState.setMarketSession(MarketSession.PREMARKET);
+		Assert.assertEquals(MarketSession.NORMAL, this.normalizer.getMarketSession(previousMarketState, 'N', true, CqsNormalizer.getMarketOpenTime() + 1000, 'T', "RSH"));
+		Assert.assertEquals(MarketSession.PREMARKET, this.normalizer.getMarketSession(previousMarketState, 'N', false, CqsNormalizer.getMarketOpenTime() + 1000, 'T', "RSH"));
+		Assert.assertEquals(MarketSession.PREMARKET, this.normalizer.getMarketSession(previousMarketState, 'N', true, CqsNormalizer.getMarketOpenTime() + 1000, 'I', "RSH"));
+		previousMarketState.setMarketSession(MarketSession.CLOSED);
+		previousMarketState.setSymbol("SYED");
+		Assert.assertEquals(MarketSession.CLOSED, this.normalizer.getMarketSession(null, 'N', true, CqsNormalizer.getMarketOpenTime() - 1000, 'R', "SYED")); // ipo closed
+		Assert.assertEquals(MarketSession.CLOSED, this.normalizer.getMarketSession(previousMarketState, 'N', true, CqsNormalizer.getMarketOpenTime() + 1000, 'R', "SYED")); // ipo closed even when past market time
+		Assert.assertEquals(MarketSession.PREMARKET, this.normalizer.getMarketSession(previousMarketState, 'N', true, CqsNormalizer.getMarketOpenTime() + 1000, 'G', "SYED"));
+		Assert.assertEquals(MarketSession.CLOSED, this.normalizer.getMarketSession(previousMarketState, 'N', true, CqsNormalizer.getMarketOpenTime() + 1000, 'O', "SYED"));
+		previousMarketState.setMarketSession(MarketSession.PREMARKET);
+		Assert.assertEquals(MarketSession.NORMAL, this.normalizer.getMarketSession(previousMarketState, 'N', true, CqsNormalizer.getMarketOpenTime() + 1000, 'O', "SYED"));
+	}
+
+	@Test
+	public void testSsrInAndOut()
+	{
+		// Not in SSR - remains not in SSR
+		Assert.assertEquals(0, CqsNormalizer.getStateConditionCode(' ', ' ', 0, new HashSet<String>(), "AA"));
+		Assert.assertEquals(0, CqsNormalizer.getStateConditionCode(' ', 'D', 0, new HashSet<String>(), "AA"));
+
+		// Not in SSR - changes to SSR
+		Assert.assertEquals(2048, CqsNormalizer.getStateConditionCode(' ', 'A', 0, new HashSet<String>(), "AA"));
+		Assert.assertEquals(2048, CqsNormalizer.getStateConditionCode(' ', 'C', 0, new HashSet<String>(), "AA"));
+		Assert.assertEquals(2048, CqsNormalizer.getStateConditionCode(' ', 'E', 0, new HashSet<String>(), "AA"));
+
+		// In SSR - stays in SSR
+		Assert.assertEquals(2048, CqsNormalizer.getStateConditionCode(' ', 'A', 2048, new HashSet<String>(), "AA"));
+		Assert.assertEquals(2048, CqsNormalizer.getStateConditionCode(' ', 'C', 2048, new HashSet<String>(), "AA"));
+		Assert.assertEquals(2048, CqsNormalizer.getStateConditionCode(' ', 'E', 2048, new HashSet<String>(), "AA"));
+
+		// In SSR - changes to not in SSR
+		Assert.assertEquals(0, CqsNormalizer.getStateConditionCode(' ', ' ', 2048, new HashSet<String>(), "AA"));
+		Assert.assertEquals(0, CqsNormalizer.getStateConditionCode(' ', 'D', 2048, new HashSet<String>(), "AA"));
+
+		// Short message does not impact SSR value
+		Assert.assertEquals(0, CqsNormalizer.getStateConditionCode(' ', (char) 0, 0, new HashSet<String>(), "AA"));
+		Assert.assertEquals(2048, CqsNormalizer.getStateConditionCode(' ', (char) 0, 2048, new HashSet<String>(), "AA"));
 	}
 }

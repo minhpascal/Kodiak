@@ -6,6 +6,7 @@ import java.util.logging.Logger;
 
 import com.clearpool.kodiak.feedlibrary.callbacks.IMdQuoteListener;
 import com.clearpool.kodiak.feedlibrary.callbacks.IMdStateListener;
+import com.clearpool.kodiak.feedlibrary.core.KodiakSelectorType;
 import com.clearpool.kodiak.feedlibrary.core.MdFeed;
 import com.clearpool.kodiak.feedlibrary.core.MdFeedProps;
 import com.clearpool.kodiak.feedlibrary.core.MdLibrary;
@@ -20,7 +21,7 @@ public class CqsTest implements IMdQuoteListener, IMdStateListener
 
 	public CqsTest() throws Exception
 	{
-		MdLibraryContext context = new MdLibraryContext(false, 1, false, 0, true);
+		MdLibraryContext context = new MdLibraryContext(false, 1, KodiakSelectorType.BLOCKING, 0, true);
 		MdLibrary cqsLibrary = new MdLibrary(context, MdFeed.CQS, new String[] { "1", "13" }, "127.0.0.1", "127.0.0.1", "C:\\cta");
 		cqsLibrary.registerService(MdServiceType.NBBO, this);
 		cqsLibrary.registerService(MdServiceType.BBO, this);
@@ -30,13 +31,13 @@ public class CqsTest implements IMdQuoteListener, IMdStateListener
 	}
 
 	@Override
-	public void quoteReceived(Quote quote, int channel)
+	public void quoteReceived(Quote quote, int channel, int index)
 	{
 		System.out.println(quote.getServiceType() + " " + quote);
 	}
 
 	@Override
-	public void stateReceived(MarketState state, int channel)
+	public void stateReceived(MarketState state, int channel, int index)
 	{
 		System.out.println(MdServiceType.STATE + " " + state);
 	}

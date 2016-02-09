@@ -19,7 +19,7 @@ public class BookQuoteCacheTest
 	@Test
 	public void testAddOrders() throws Exception
 	{
-		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0);
+		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0, 0);
 
 		// Add orders
 		cache.addOrder("A", "001", Side.BUY, 100, 10.0, Exchange.USEQ_TEST.getMicCode(), 1000);
@@ -72,7 +72,7 @@ public class BookQuoteCacheTest
 	@Test
 	public void testCancelOrderAll() throws Exception
 	{
-		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0);
+		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0, 0);
 
 		// Add orders
 		cache.addOrder("A", "001", Side.BUY, 100, 10.0, Exchange.USEQ_TEST.getMicCode(), 1000);
@@ -110,7 +110,7 @@ public class BookQuoteCacheTest
 	@Test
 	public void testCancelPartial() throws Exception
 	{
-		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0);
+		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0, 0);
 
 		// Add orders
 		cache.addOrder("A", "001", Side.BUY, 100, 10.0, Exchange.USEQ_TEST.getMicCode(), 1000);
@@ -150,7 +150,7 @@ public class BookQuoteCacheTest
 	@Test
 	public void testCancelPartialInvalidSize() throws Exception
 	{
-		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0);
+		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0, 0);
 
 		// Add orders
 		cache.addOrder("A", "001", Side.BUY, 100, 10.0, Exchange.USEQ_TEST.getMicCode(), 1000);
@@ -185,7 +185,7 @@ public class BookQuoteCacheTest
 	@Test
 	public void testReplaceOrders() throws Exception
 	{
-		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0);
+		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0, 0);
 
 		// Add orders
 		cache.addOrder("A", "001", Side.BUY, 100, 12.0, Exchange.USEQ_TEST.getMicCode(), 1000);
@@ -241,7 +241,7 @@ public class BookQuoteCacheTest
 	@Test
 	public void testReplaceOrdersDiffSize() throws Exception
 	{
-		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0);
+		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0, 0);
 
 		// Add orders
 		cache.addOrder("A", "001", Side.BUY, 100, 12.0, Exchange.USEQ_TEST.getMicCode(), 1000);
@@ -297,7 +297,7 @@ public class BookQuoteCacheTest
 	@Test
 	public void testReplaceOrdersDiffPriceDiffSize() throws Exception
 	{
-		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0);
+		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0, 0);
 
 		// Add orders
 		cache.addOrder("A", "001", Side.BUY, 100, 12.0, Exchange.USEQ_TEST.getMicCode(), 1000);
@@ -353,7 +353,7 @@ public class BookQuoteCacheTest
 	@Test
 	public void testReplaceOrdersSamePriceDiffSize() throws Exception
 	{
-		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0);
+		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0, 0);
 
 		double price = 10.0;
 		int size1 = 100;
@@ -385,7 +385,7 @@ public class BookQuoteCacheTest
 	@Test
 	public void testReplaceOrdersSamePriceSameSize() throws Exception
 	{
-		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0);
+		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0, 0);
 
 		double price = 10.0;
 		int size = 100;
@@ -416,7 +416,7 @@ public class BookQuoteCacheTest
 	@Test
 	public void testBidTopNLevelWithAddOrder() throws Exception
 	{
-		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0);
+		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0, 0);
 		long timeNano = 1000;
 		Side side = Side.BUY;
 		String symbol = "A";
@@ -465,7 +465,7 @@ public class BookQuoteCacheTest
 	@Test
 	public void testAskTopNLevelWithAddOrder() throws Exception
 	{
-		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0);
+		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0, 0);
 		long timeNano = 1000;
 		Side side = Side.SELL;
 		String symbol = "A";
@@ -514,7 +514,7 @@ public class BookQuoteCacheTest
 	@Test
 	public void testBidTopNLevelWithCancelOrder() throws Exception
 	{
-		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0);
+		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0, 0);
 		long timeNano = 1000;
 		Side side = Side.BUY;
 		String symbol = "A";
@@ -563,7 +563,7 @@ public class BookQuoteCacheTest
 	@Test
 	public void testAskTopNLevelWithCancelOrder() throws Exception
 	{
-		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0);
+		BookQuoteCache cache = new BookQuoteCache(null, null, MdServiceType.BOOK_XNAS, "A-Z", 0, 0);
 		long timeNano = 1000;
 		Side side = Side.SELL;
 		String symbol = "A";

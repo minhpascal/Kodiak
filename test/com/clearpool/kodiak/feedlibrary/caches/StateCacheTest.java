@@ -13,7 +13,7 @@ public class StateCacheTest
 	@Test
 	public void testStateCaching()
 	{
-		StateCache cache = new StateCache(null, null, null, null, 0);
+		StateCache cache = new StateCache(null, null, null, null, 0, 0);
 		MarketState state1 = new MarketState();
 		state1.setServiceType(MdServiceType.STATE);
 		state1.setSymbol("AAPL");

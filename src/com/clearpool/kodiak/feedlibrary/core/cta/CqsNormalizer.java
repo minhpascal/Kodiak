@@ -69,11 +69,11 @@ public class CqsNormalizer implements IMdNormalizer, IMarketSessionSettable
 
 	private final Set<String> ipoSymbols;
 
-	public CqsNormalizer(Map<MdServiceType, IMdLibraryCallback> callbacks, String range, int channel)
+	public CqsNormalizer(Map<MdServiceType, IMdLibraryCallback> callbacks, String range, int channel, int index)
 	{
-		this.nbbos = new NbboQuoteCache((IMdQuoteListener) callbacks.get(MdServiceType.NBBO), MdFeed.CQS, range, channel);
-		this.bbos = new BboQuoteCache((IMdQuoteListener) callbacks.get(MdServiceType.BBO), MdFeed.CQS, range, channel);
-		this.states = new StateCache((IMdStateListener) callbacks.get(MdServiceType.STATE), this, MdFeed.CQS, range, channel);
+		this.nbbos = new NbboQuoteCache((IMdQuoteListener) callbacks.get(MdServiceType.NBBO), MdFeed.CQS, range, channel, index);
+		this.bbos = new BboQuoteCache((IMdQuoteListener) callbacks.get(MdServiceType.BBO), MdFeed.CQS, range, channel, index);
+		this.states = new StateCache((IMdStateListener) callbacks.get(MdServiceType.STATE), this, MdFeed.CQS, range, channel, index);
 		this.tmpBuffer3 = new byte[3];
 		this.tmpBuffer4 = new byte[4];
 		this.tmpBuffer11 = new byte[11];
@@ -115,7 +115,7 @@ public class CqsNormalizer implements IMdNormalizer, IMarketSessionSettable
 		return premarketopentime.getTime();
 	}
 
-	private static long getMarketOpenTime()
+	static long getMarketOpenTime()
 	{
 		Object marketOpenTimeValue = MdFeedProps.getInstanceProperty(MdFeed.CQS.toString(), "MARKETOPENTIME");
 		if (marketOpenTimeValue == null) return MdDateUtil.createTime(new Date(), 9, 30, 0).getTime();
@@ -161,6 +161,7 @@ public class CqsNormalizer implements IMdNormalizer, IMarketSessionSettable
 		char msgType = ctaPacket.getMessageType();
 		char participantId = ctaPacket.getParticipantId();
 		long timestamp = ctaPacket.getTimestamp();
+		long participantTimestamp = ctaPacket.getParticipantTimestamp();
 		ByteBuffer buffer = ctaPacket.getBuffer();
 
 		if (msgCategory == CATEGORY_BOND || msgCategory == CATEGORY_LOCAL) return;
@@ -191,7 +192,7 @@ public class CqsNormalizer implements IMdNormalizer, IMarketSessionSettable
 				if (isLong) ByteBufferUtil.advancePosition(buffer, 1); // reserved
 				char nbboLuldIndicator = isLong ? (char) buffer.get() : ' ';
 				if (isLong) ByteBufferUtil.advancePosition(buffer, 1); // finra bbo luld indicator
-				char shortSaleRestrictionIndicator = isLong ? (char) buffer.get() : ' ';
+				char shortSaleRestrictionIndicator = isLong ? (char) buffer.get() : 0;
 				ByteBufferUtil.advancePosition(buffer, 1); // reserved
 				char nbboIndicator = (char) buffer.get();
 				ByteBufferUtil.advancePosition(buffer, 1); // finra bbo indicator
@@ -201,12 +202,15 @@ public class CqsNormalizer implements IMdNormalizer, IMarketSessionSettable
 				// Update lower and upper bands
 				if (quoteCondition == '0')
 				{
-					this.states.updateLowerAndUpperBands(symbol, primaryListing, isPrimaryListing, bidPrice, askPrice, timestamp);
+					this.states.updateLowerAndUpperBands(symbol, primaryListing, isPrimaryListing, bidPrice, askPrice, timestamp, participantTimestamp);
 				}
 				else
 				{
 					// Update BBO
-					this.bbos.updateBidAndOffer(symbol, exchange, bidPrice, bidSize, askPrice, askSize, timestamp,
+					boolean isClosingQuote = isPrimaryListing && (exchange == Exchange.USEQ_NYSE_EURONEXT || exchange == Exchange.USEQ_NYSE_MKT) && quoteCondition == 'C';
+					int bboBidSize = (isClosingQuote) ? 0 : bidSize;
+					int bboAskSize = (isClosingQuote) ? 0 : askSize;
+					this.bbos.updateBidAndOffer(symbol, exchange, bidPrice, bboBidSize, askPrice, bboAskSize, timestamp, participantTimestamp,
 							getBboConditionCode(retailInterestIndicator, luldIndicator, quoteCondition, 0));
 
 					// Update NBBO
@@ -228,15 +232,16 @@ public class CqsNormalizer implements IMdNormalizer, IMarketSessionSettable
 						String finraBestAskMarketMaker = isNbboLong ? ByteBufferUtil.getString(buffer, this.tmpBuffer4) : null;
 						Exchange bestAskExchange = CtaUtils.getExchange(bestAskParticipantId, finraBestAskMarketMaker);
 						ByteBufferUtil.advancePosition(buffer, isNbboLong ? 3 : 1); // reserved
-						this.nbbos.updateBidAndOffer(symbol, bestBidPrice, bestBidSize, bestBidExchange, bestAskPrice, bestAskSize, bestAskExchange, timestamp, quoteCondition);
+						this.nbbos.updateBidAndOffer(symbol, bestBidPrice, bestBidSize, bestBidExchange, bestAskPrice, bestAskSize, bestAskExchange, timestamp,
+								participantTimestamp, quoteCondition);
 					}
 					else if (nbboIndicator == NBBO_CONTAINED)
 					{
-						this.nbbos.updateBidAndOffer(symbol, bidPrice, bidSize, exchange, askPrice, askSize, exchange, timestamp, quoteCondition);
+						this.nbbos.updateBidAndOffer(symbol, bidPrice, bidSize, exchange, askPrice, askSize, exchange, timestamp, participantTimestamp, quoteCondition);
 					}
 					else if (nbboIndicator == NBBO_NONE)
 					{
-						this.nbbos.updateBidAndOffer(symbol, 0, 0, null, 0, 0, null, timestamp, quoteCondition);
+						this.nbbos.updateBidAndOffer(symbol, 0, 0, null, 0, 0, null, timestamp, participantTimestamp, quoteCondition);
 					}
 				}
 
@@ -246,9 +251,9 @@ public class CqsNormalizer implements IMdNormalizer, IMarketSessionSettable
 						symbol,
 						primaryListing,
 						isPrimaryListing,
-						getMarketSession(previousState, primaryListing, isPrimaryListing, timestamp),
+						getMarketSession(previousState, primaryListing, isPrimaryListing, timestamp, quoteCondition, symbol),
 						getStateConditionCode(nbboLuldIndicator, shortSaleRestrictionIndicator, (previousState == null) ? 0 : previousState.getConditionCode(), this.ipoSymbols,
-								symbol), getTradingState(quoteCondition, isPrimaryListing, this.ipoSymbols, this.isPreMarketSession, symbol), timestamp);
+								symbol), getTradingState(quoteCondition, isPrimaryListing, this.isPreMarketSession), timestamp, participantTimestamp);
 			}
 		}
 		else if (msgCategory == CATEGORY_ADMINISTRATIVE)
@@ -293,18 +298,22 @@ public class CqsNormalizer implements IMdNormalizer, IMarketSessionSettable
 
 		if (!this.isPreMarketSession && CqsNormalizer.PRE_MARKET_OPEN_TIME <= timestamp && timestamp < CqsNormalizer.MARKET_OPEN_TIME)
 		{
-			this.states.updateAllSymbols(MarketSession.PREMARKET, timestamp, null);
+			this.states.updateAllSymbols(MarketSession.PREMARKET, timestamp, participantTimestamp, this.ipoSymbols);
 			this.isPreMarketSession = true;
 		}
 		else if (!this.isPostMarketSession && CqsNormalizer.MARKET_CLOSE_TIME <= timestamp && timestamp < CqsNormalizer.POST_MARKET_CLOSE_TIME)
 		{
-			this.states.updateAllSymbols(MarketSession.POSTMARKET, timestamp, null);
+			this.states.updateAllSymbols(MarketSession.POSTMARKET, timestamp, participantTimestamp, null);
 			this.isPostMarketSession = true;
 		}
 		else if (!this.isClosed && CqsNormalizer.POST_MARKET_CLOSE_TIME <= timestamp)
 		{
-			this.states.updateAllSymbols(MarketSession.CLOSED, timestamp, null);
+			this.states.updateAllSymbols(MarketSession.CLOSED, timestamp, participantTimestamp, null);
 			this.isClosed = true;
+		}
+		else if (this.isPreMarketSession && timestamp >= CqsNormalizer.MARKET_OPEN_TIME && timestamp < CqsNormalizer.MARKET_CLOSE_TIME)
+		{
+			this.isPreMarketSession = false;
 		}
 	}
 
@@ -348,6 +357,9 @@ public class CqsNormalizer implements IMdNormalizer, IMarketSessionSettable
 		{
 			case 'R':
 				break;
+			case '4':
+				conditionCode = MdEntity.setCondition(conditionCode, Quote.CONDITION_EXCLUDED_FROM_NBBO, Quote.CONDITION_ON_DEMAND_INTRADAY_AUCTION);
+				break;
 			case 'C':
 			case 'D':
 			case 'G':
@@ -380,7 +392,7 @@ public class CqsNormalizer implements IMdNormalizer, IMarketSessionSettable
 		return conditionCode;
 	}
 
-	private static int getStateConditionCode(char nbboLuldIndicator, char shortSaleRestrictionIndicator, int conditionCode, Set<String> ipoSymbols, String symbol)
+	static int getStateConditionCode(char nbboLuldIndicator, char shortSaleRestrictionIndicator, int conditionCode, Set<String> ipoSymbols, String symbol)
 	{
 		MdEntity.unsetCondition(conditionCode, MarketState.CONDITION_BID_NON_EXECUTABLE);
 		MdEntity.unsetCondition(conditionCode, MarketState.CONDITION_ASK_NON_EXECUTABLE);
@@ -424,17 +436,22 @@ public class CqsNormalizer implements IMdNormalizer, IMarketSessionSettable
 				break;
 		}
 
-		MdEntity.unsetCondition(conditionCode, MarketState.CONDITION_SHORT_SALE_RESTRICTION);
-		switch (shortSaleRestrictionIndicator)
+		if (shortSaleRestrictionIndicator != 0)
 		{
-			case ' ':
-				break;
-			case 'A':
-			case 'C':
-				conditionCode = MdEntity.setCondition(conditionCode, MarketState.CONDITION_SHORT_SALE_RESTRICTION);
-				break;
-			default:
-				break;
+			conditionCode = MdEntity.unsetCondition(conditionCode, MarketState.CONDITION_SHORT_SALE_RESTRICTION);
+			switch (shortSaleRestrictionIndicator)
+			{
+				case ' ':
+				case 'D':
+					break;
+				case 'A':
+				case 'C':
+				case 'E':
+					conditionCode = MdEntity.setCondition(conditionCode, MarketState.CONDITION_SHORT_SALE_RESTRICTION);
+					break;
+				default:
+					break;
+			}
 		}
 		if (ipoSymbols.contains(symbol))
 		{
@@ -443,16 +460,15 @@ public class CqsNormalizer implements IMdNormalizer, IMarketSessionSettable
 		return conditionCode;
 	}
 
-	static TradingState getTradingState(char quoteCondition, boolean isPrimary, Set<String> ipos, boolean isPreMarket, String symbol)
+	static TradingState getTradingState(char quoteCondition, boolean isPrimary, boolean isPreMarket)
 	{
 		if (isPrimary)
 		{
-			boolean isPreMarketAndIPO = isPreMarket && ipos.contains(symbol);
 			switch (quoteCondition)
 			{
 				case 'R':
 				case 'T':
-					return isPreMarketAndIPO ? TradingState.AUCTION : TradingState.TRADING;
+					return TradingState.TRADING;
 				case 'D':
 				case 'J':
 				case 'Q':
@@ -461,11 +477,17 @@ public class CqsNormalizer implements IMdNormalizer, IMarketSessionSettable
 				case '1':
 				case '2':
 				case '3':
-					return TradingState.HALTED;
 				case 'M':
-					return TradingState.PAUSED;
+					return TradingState.HALTED;
+				case 'K':
+				case 'P':
+					return isPreMarket ? TradingState.TRADING : TradingState.HALTED;
+				case 'G':
+					return TradingState.AUCTION;
 				default:
-					return isPreMarketAndIPO ? TradingState.AUCTION : TradingState.TRADING;
+				{
+					return TradingState.TRADING;
+				}
 			}
 		}
 		return null;
@@ -479,20 +501,36 @@ public class CqsNormalizer implements IMdNormalizer, IMarketSessionSettable
 		return lotSize.intValue();
 	}
 
-	private MarketSession getMarketSession(MarketState previousState, char primaryListing, boolean isPrimaryListing, long timestamp)
+	protected MarketSession getMarketSession(MarketState previousState, char primaryListing, boolean isPrimaryListing, long timestamp, char quoteCondition, String symbol)
 	{
-		if (previousState == null) return getMarketSession(primaryListing, isPrimaryListing, timestamp);
+		if (previousState == null)
+		{
+			if (this.ipoSymbols.contains(symbol))
+			{
+				return MarketSession.CLOSED;
+			}
+			return getMarketSession(primaryListing, isPrimaryListing, timestamp);
+		}
 		MarketSession previousSession = previousState.getMarketSession();
+
 		if (previousSession == MarketSession.PREMARKET || previousSession == null)
 		{
 			if (primaryListing == 'N' || primaryListing == 'A')
 			{
-				if (isPrimaryListing && CqsNormalizer.MARKET_OPEN_TIME <= timestamp && timestamp < CqsNormalizer.MARKET_CLOSE_TIME) return MarketSession.NORMAL;
+				if (isPrimaryListing && CqsNormalizer.MARKET_OPEN_TIME <= timestamp && timestamp < CqsNormalizer.MARKET_CLOSE_TIME && quoteCondition != 'I'
+						|| (quoteCondition == 'O' && this.ipoSymbols.contains(symbol)))
+				{
+					return MarketSession.NORMAL;
+				}
 			}
 			else
 			{
 				if (CqsNormalizer.MARKET_OPEN_TIME <= timestamp && timestamp < CqsNormalizer.MARKET_CLOSE_TIME) return MarketSession.NORMAL;
 			}
+		}
+		else if (previousSession == MarketSession.CLOSED && (primaryListing == 'N' || primaryListing == 'A') && isPrimaryListing && quoteCondition == 'G')
+		{
+			return MarketSession.PREMARKET;
 		}
 		return previousSession;
 	}

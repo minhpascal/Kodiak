@@ -5,6 +5,7 @@ import java.util.logging.Logger;
 
 import com.clearpool.kodiak.feedlibrary.callbacks.IMdBookQuoteListener;
 import com.clearpool.kodiak.feedlibrary.callbacks.IMdImbalanceListener;
+import com.clearpool.kodiak.feedlibrary.core.KodiakSelectorType;
 import com.clearpool.kodiak.feedlibrary.core.MdFeed;
 import com.clearpool.kodiak.feedlibrary.core.MdLibrary;
 import com.clearpool.kodiak.feedlibrary.core.MdLibraryContext;
@@ -18,7 +19,7 @@ public class BxTest implements IMdBookQuoteListener, IMdImbalanceListener
 
 	public BxTest() throws Exception
 	{
-		MdLibraryContext context = new MdLibraryContext(false, 1, false, 0, true);
+		MdLibraryContext context = new MdLibraryContext(false, 1, KodiakSelectorType.BLOCKING, 0, true);
 		MdLibrary nasdaqLibrary = new MdLibrary(context, MdFeed.BX, new String[] { "1" }, "127.0.0.1", "127.0.0.1", "C:\\nasdaq");
 		nasdaqLibrary.registerService(MdServiceType.BOOK_XBOS, this);
 		nasdaqLibrary.registerService(MdServiceType.IMBALANCE_XBOS, this);
@@ -27,13 +28,13 @@ public class BxTest implements IMdBookQuoteListener, IMdImbalanceListener
 	}
 
 	@Override
-	public void bookQuoteReceived(BookQuote bookQuote, int channel)
+	public void bookQuoteReceived(BookQuote bookQuote, int channel, int index)
 	{
 		System.out.println(bookQuote);
 	}
 
 	@Override
-	public void imbalanceReceived(Imbalance imbalance, int channel)
+	public void imbalanceReceived(Imbalance imbalance, int channel, int index)
 	{
 		System.out.println(imbalance);
 	}

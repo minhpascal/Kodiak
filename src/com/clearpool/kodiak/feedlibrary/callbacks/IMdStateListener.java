@@ -4,5 +4,5 @@ import com.clearpool.messageobjects.marketdata.MarketState;
 
 public interface IMdStateListener extends IMdLibraryCallback
 {
-	public void stateReceived(MarketState state, int channel);
+	public void stateReceived(MarketState state, int channel, int index);
 }

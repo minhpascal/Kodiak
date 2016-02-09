@@ -32,16 +32,18 @@ public class BookQuoteCache implements IMdServiceCache
 	private final MdServiceType mdServiceType;
 	private final String range;
 	private final int channel;
+	private final int index;
 	private final Map<String, BookOrder> orderIdToBookOrder;
 	private final Map<String, Book> symbolToBook;
 
-	public BookQuoteCache(IMdBookQuoteListener bookListener, MdFeed feedType, MdServiceType mdServiceType, String range, int channel)
+	public BookQuoteCache(IMdBookQuoteListener bookListener, MdFeed feedType, MdServiceType mdServiceType, String range, int channel, int index)
 	{
 		this.bookListener = bookListener;
 		this.feedType = feedType;
 		this.mdServiceType = mdServiceType;
 		this.range = range;
 		this.channel = channel;
+		this.index = index;
 		this.orderIdToBookOrder = new HashMap<String, BookOrder>();
 		this.symbolToBook = new HashMap<String, Book>();
 	}
@@ -145,7 +147,7 @@ public class BookQuoteCache implements IMdServiceCache
 		if (this.bookListener != null)
 		{
 			BookQuote clonedBookQuote = bookQuote.clone();
-			this.bookListener.bookQuoteReceived(clonedBookQuote, this.channel);
+			this.bookListener.bookQuoteReceived(clonedBookQuote, this.channel, this.index);
 		}
 	}
 

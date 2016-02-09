@@ -20,22 +20,25 @@ public class BboQuoteCache implements IMdServiceCache
 	private final MdFeed feedType;
 	private final String range;
 	private final int channel;
+	private final int index;
 	private final MdServiceType mdServiceType;
 	private final Map<String, Map<Exchange, Quote>> quotes; // feed symbol -> exchange -> quote
 	private final Map<String, MutableInteger> symbolToSequenceNumbers; // CMS symbol -> sequence number
 
-	public BboQuoteCache(IMdQuoteListener quoteListener, MdFeed feedType, String range, int channel)
+	public BboQuoteCache(IMdQuoteListener quoteListener, MdFeed feedType, String range, int channel, int index)
 	{
 		this.quoteListener = quoteListener;
 		this.feedType = feedType;
 		this.range = range;
 		this.channel = channel;
+		this.index = index;
 		this.mdServiceType = MdServiceType.BBO;
 		this.quotes = new HashMap<>();
 		this.symbolToSequenceNumbers = new HashMap<String, MutableInteger>();
 	}
 
-	public void updateBidAndOffer(String symbol, Exchange exchange, double bidPrice, int bidSize, double askPrice, int askSize, long timestamp, int conditionCode)
+	public void updateBidAndOffer(String symbol, Exchange exchange, double bidPrice, int bidSize, double askPrice, int askSize, long timestamp, long participantTimestamp,
+			int conditionCode)
 	{
 		Map<Exchange, Quote> symbolQuotes = this.quotes.get(symbol);
 		if (symbolQuotes == null)
@@ -58,6 +61,7 @@ public class BboQuoteCache implements IMdServiceCache
 		quote.setAskSize(askSize);
 		quote.setAskExchange(exchange);
 		quote.setTimestamp(timestamp);
+		quote.setParticipantTimestamp(participantTimestamp);
 		quote.setConditionCode(conditionCode);
 		sendQuote(quote);
 	}
@@ -71,7 +75,7 @@ public class BboQuoteCache implements IMdServiceCache
 		if (this.quoteListener != null)
 		{
 			quote = quote.clone();
-			this.quoteListener.quoteReceived(quote, this.channel);
+			this.quoteListener.quoteReceived(quote, this.channel, this.index);
 		}
 	}
 
@@ -136,7 +140,7 @@ public class BboQuoteCache implements IMdServiceCache
 					if (this.quoteListener != null)
 					{
 						quote = quote.clone();
-						this.quoteListener.quoteReceived(quote, this.channel);
+						this.quoteListener.quoteReceived(quote, this.channel, this.index);
 					}
 				}
 			}

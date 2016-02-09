@@ -22,25 +22,22 @@ public class StateCache implements IMdServiceCache
 	private final MdFeed feedType;
 	private final String range;
 	private final int channel;
+	private final int index;
 	private final Map<String, MarketState> states;
 
-	public StateCache(IMdStateListener iMdStateListener, IMarketSessionSettable marketSessionSetter, MdFeed feedType, String range, int channel)
+	public StateCache(IMdStateListener iMdStateListener, IMarketSessionSettable marketSessionSetter, MdFeed feedType, String range, int channel, int index)
 	{
 		this.stateListener = iMdStateListener;
 		this.marketSessionSetter = marketSessionSetter;
 		this.feedType = feedType;
 		this.range = range;
 		this.channel = channel;
+		this.index = index;
 		this.states = new HashMap<>();
 	}
 
-	public void update(MarketState state)
-	{
-		this.states.put(state.getSymbol(), state);
-		sendState(state, state.getTimestamp());
-	}
-
-	public void updateState(String symbol, char primaryListing, boolean isPrimaryListing, MarketSession marketSession, int conditionCode, TradingState tradingState, long timestamp)
+	public void updateState(String symbol, char primaryListing, boolean isPrimaryListing, MarketSession marketSession, int conditionCode, TradingState tradingState,
+			long timestamp, long participantTimestamp)
 	{
 		boolean isNew = false;
 		MarketState state = this.states.get(symbol);
@@ -72,11 +69,11 @@ public class StateCache implements IMdServiceCache
 
 		if (isNew || sendUpdate)
 		{
-			sendState(state, timestamp);
+			sendState(state, timestamp, participantTimestamp);
 		}
 	}
 
-	public void updateTradingState(String symbol, char primaryListing, boolean isPrimaryListing, TradingState tradingState, long timestamp)
+	public void updateTradingState(String symbol, char primaryListing, boolean isPrimaryListing, TradingState tradingState, long timestamp, long participantTimestamp)
 	{
 		boolean isNew = false;
 		MarketState state = this.states.get(symbol);
@@ -96,12 +93,12 @@ public class StateCache implements IMdServiceCache
 
 		if (isNew || sendUpdate)
 		{
-			sendState(state, timestamp);
+			sendState(state, timestamp, participantTimestamp);
 		}
 	}
 
 	public void updateMarketSessionAndTradingState(String symbol, char primaryListing, boolean isPrimaryListing, MarketSession marketSession, TradingState tradingState,
-			long timestamp)
+			long timestamp, long participantTimestamp)
 	{
 		boolean isNew = false;
 		MarketState state = this.states.get(symbol);
@@ -126,11 +123,11 @@ public class StateCache implements IMdServiceCache
 
 		if (isNew || sendUpdate)
 		{
-			sendState(state, timestamp);
+			sendState(state, timestamp, participantTimestamp);
 		}
 	}
 
-	public void updateMarketSession(String symbol, char primaryListing, boolean isPrimaryListing, MarketSession marketSession, long timestamp)
+	public void updateMarketSession(String symbol, char primaryListing, boolean isPrimaryListing, MarketSession marketSession, long timestamp, long participantTimestamp)
 	{
 		boolean isNew = false;
 		MarketState state = this.states.get(symbol);
@@ -150,11 +147,11 @@ public class StateCache implements IMdServiceCache
 
 		if (isNew || sendUpdate)
 		{
-			sendState(state, timestamp);
+			sendState(state, timestamp, participantTimestamp);
 		}
 	}
 
-	public void updateConditionCode(String symbol, char primaryListing, boolean isPrimaryListing, int conditionCode, long timestamp)
+	public void updateConditionCode(String symbol, char primaryListing, boolean isPrimaryListing, int conditionCode, long timestamp, long participantTimestamp)
 	{
 		boolean isNew = false;
 		MarketState state = this.states.get(symbol);
@@ -174,11 +171,11 @@ public class StateCache implements IMdServiceCache
 
 		if (isNew || sendUpdate)
 		{
-			sendState(state, timestamp);
+			sendState(state, timestamp, participantTimestamp);
 		}
 	}
 
-	public void updateLowerAndUpperBands(String symbol, char primaryListing, boolean isPrimaryListing, double lowerBand, double upperBand, long timestamp)
+	public void updateLowerAndUpperBands(String symbol, char primaryListing, boolean isPrimaryListing, double lowerBand, double upperBand, long timestamp, long participantTimestamp)
 	{
 		boolean isNew = false;
 		MarketState state = this.states.get(symbol);
@@ -204,11 +201,11 @@ public class StateCache implements IMdServiceCache
 
 		if (isNew || sendUpdate)
 		{
-			sendState(state, timestamp);
+			sendState(state, timestamp, participantTimestamp);
 		}
 	}
 
-	public void updateAllSymbols(MarketSession marketSession, long timestamp, Set<String> excludedSymbols)
+	public void updateAllSymbols(MarketSession marketSession, long timestamp, long participantTimestamp, Set<String> excludedSymbols)
 	{
 		for (MarketState state : this.states.values())
 		{
@@ -222,22 +219,23 @@ public class StateCache implements IMdServiceCache
 
 			if (sendUpdate)
 			{
-				sendState(state, timestamp);
+				sendState(state, timestamp, participantTimestamp);
 			}
 		}
 	}
 
-	private void sendState(MarketState state, long timestamp)
+	private void sendState(MarketState state, long timestamp, long participantTimestamp)
 	{
 		state.setMdTimestamp(System.currentTimeMillis());
 		state.setTimestamp(timestamp);
+		state.setParticipantTimestamp(participantTimestamp);
 		state.setSymbolSequenceNumber(state.getSymbolSequenceNumber() + 1);
 		state.setConditionCode(MdEntity.setCondition(state.getConditionCode(), MdEntity.CONDITION_FRESH));
 
 		if (this.stateListener != null)
 		{
 			state = state.clone();
-			this.stateListener.stateReceived(state, this.channel);
+			this.stateListener.stateReceived(state, this.channel, this.index);
 		}
 	}
 
@@ -285,9 +283,16 @@ public class StateCache implements IMdServiceCache
 			if (this.stateListener != null)
 			{
 				state = state.clone();
-				this.stateListener.stateReceived(state, this.channel);
+				this.stateListener.stateReceived(state, this.channel, this.index);
 			}
 		}
 		return this.states.keySet();
+	}
+
+	// unit test only
+	void update(MarketState state)
+	{
+		this.states.put(state.getSymbol(), state);
+		sendState(state, state.getTimestamp(), state.getTimestamp());
 	}
 }

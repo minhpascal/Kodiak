@@ -23,15 +23,17 @@ public class SaleCache implements IMdServiceCache
 	private final MdFeed feedType;
 	private final String range;
 	private final int channel;
+	private final int index;
 	private final boolean isFirstOpen;
 	private final Map<String, Sale> sales;
 
-	public SaleCache(IMdSaleListener saleListener, MdFeed feedType, String range, int channel, boolean isFirstOpen)
+	public SaleCache(IMdSaleListener saleListener, MdFeed feedType, String range, int channel, int index, boolean isFirstOpen)
 	{
 		this.saleListener = saleListener;
 		this.feedType = feedType;
 		this.range = range;
 		this.channel = channel;
+		this.index = index;
 		this.isFirstOpen = isFirstOpen;
 		this.sales = new HashMap<>();
 	}
@@ -42,7 +44,7 @@ public class SaleCache implements IMdServiceCache
 		return MdServiceType.SALE;
 	}
 
-	public void updateWithSaleCondition(String symbol, double price, int size, Exchange exchange, long timestamp, int saleCondition, String condition)
+	public void updateWithSaleCondition(String symbol, double price, int size, Exchange exchange, long timestamp, long participantTimestamp, int saleCondition, String condition)
 	{
 		boolean isFirstSale = false;
 		Sale sale = this.sales.get(symbol);
@@ -95,6 +97,7 @@ public class SaleCache implements IMdServiceCache
 
 		sale.setExchange(exchange);
 		sale.setTimestamp(timestamp);
+		sale.setParticipantTimestamp(participantTimestamp);
 		sale.setNonDisplayablePrice(price);
 		sale.setNonDisplayableSize(size);
 		sale.setConditionCode(MdEntity.setCondition(saleCondition, MdEntity.CONDITION_FRESH));
@@ -102,7 +105,7 @@ public class SaleCache implements IMdServiceCache
 		sendSale(sale);
 	}
 
-	public void updateOpenInterest(String symbol, long openInterest, long timestamp, String condition)
+	public void updateOpenInterest(String symbol, long openInterest, long timestamp, long participantTimestamp, String condition)
 	{
 		Sale sale = this.sales.get(symbol);
 		if (sale == null)
@@ -113,6 +116,7 @@ public class SaleCache implements IMdServiceCache
 
 		sale.setOpenInterest(openInterest);
 		sale.setTimestamp(timestamp);
+		sale.setParticipantTimestamp(participantTimestamp);
 		sale.setConditionCode(MdEntity.setCondition(0, Sale.CONDITION_CODE_OPEN_INTEREST, MdEntity.CONDITION_FRESH));
 		sale.setCondition(condition);
 		sendSale(sale);
@@ -135,7 +139,7 @@ public class SaleCache implements IMdServiceCache
 		sendSale(sale);
 	}
 
-	public void setLatestClosePrice(String symbol, Exchange exchange, double closePrice, long timestamp, String condition, boolean sendData)
+	public void setLatestClosePrice(String symbol, Exchange exchange, double closePrice, long timestamp, long participantTimestamp, String condition, boolean sendData)
 	{
 		Sale sale = this.sales.get(symbol);
 		if (sale == null)
@@ -147,6 +151,7 @@ public class SaleCache implements IMdServiceCache
 		sale.setExchange(exchange);
 		sale.setLatestClosePrice(closePrice);
 		sale.setTimestamp(timestamp);
+		sale.setParticipantTimestamp(participantTimestamp);
 		sale.setConditionCode(0);
 		sale.setCondition(condition);
 
@@ -156,7 +161,8 @@ public class SaleCache implements IMdServiceCache
 		}
 	}
 
-	public void updateEndofDay(String symbol, long volume, long openInterest, double openPrice, double highPrice, double lowPrice, double lastPrice, long timestamp)
+	public void updateEndofDay(String symbol, long volume, long openInterest, double openPrice, double highPrice, double lowPrice, double lastPrice, long timestamp,
+			long participantTimestamp)
 	{
 		boolean isFirstSale = false;
 		Sale sale = this.sales.get(symbol);
@@ -203,6 +209,7 @@ public class SaleCache implements IMdServiceCache
 		{
 			saleCondition = MdEntity.setCondition(saleCondition, Sale.CONDITION_CODE_CORRECTION);
 			sale.setTimestamp(timestamp);
+			sale.setParticipantTimestamp(participantTimestamp);
 			sale.setConditionCode(saleCondition);
 			sale.setCondition("EOD");
 			sendSale(sale);
@@ -210,7 +217,7 @@ public class SaleCache implements IMdServiceCache
 		}
 	}
 
-	public void updateEndofDay(String symbol, double closePrice, double lowPrice, double highPrice, long volume, long timestamp, Exchange exchange)
+	public void updateEndofDay(String symbol, double closePrice, double lowPrice, double highPrice, long volume, long timestamp, long participantTimestamp, Exchange exchange)
 	{
 		boolean isFirstSale = false;
 		Sale sale = this.sales.get(symbol);
@@ -248,6 +255,7 @@ public class SaleCache implements IMdServiceCache
 		{
 			saleCondition = MdEntity.setCondition(saleCondition, Sale.CONDITION_CODE_CORRECTION);
 			sale.setTimestamp(timestamp);
+			sale.setParticipantTimestamp(participantTimestamp);
 			sale.setConditionCode(saleCondition);
 			sale.setCondition("EOD");
 			sendSale(sale);
@@ -255,8 +263,8 @@ public class SaleCache implements IMdServiceCache
 		}
 	}
 
-	public void cancelWithStats(String symbol, double originalPrice, int originalSize, String originalCondition, int originalConditionCode, long timestamp, Exchange exchange,
-			double lastPrice, double highPrice, double lowPrice, double openPrice, long volume)
+	public void cancelWithStats(String symbol, double originalPrice, int originalSize, String originalCondition, int originalConditionCode, long timestamp,
+			long participantTimestamp, Exchange exchange, double lastPrice, double highPrice, double lowPrice, double openPrice, long volume)
 	{
 		boolean isFirstSale = false;
 		Sale sale = this.sales.get(symbol);
@@ -280,28 +288,28 @@ public class SaleCache implements IMdServiceCache
 		}
 
 		int saleCondition = MdEntity.setCondition(originalConditionCode, Sale.CONDITION_CODE_CANCEL);
-		if (lastPrice != -1 && sale.getPrice() != lastPrice)
+		if (lastPrice > 0 && sale.getPrice() != lastPrice)
 		{
 			sale.setPrice(lastPrice);
 			sale.setSize(0);
 			saleCondition = MdEntity.setCondition(saleCondition, Sale.CONDITION_CODE_LAST);
 		}
-		if (highPrice != -1 && sale.getHighPrice() != highPrice)
+		if (highPrice > 0 && sale.getHighPrice() != highPrice)
 		{
 			sale.setHighPrice(highPrice);
 			saleCondition = MdEntity.setCondition(saleCondition, Sale.CONDITION_CODE_HIGH);
 		}
-		if (lowPrice != -1 && sale.getLowPrice() != lowPrice)
+		if (lowPrice > 0 && sale.getLowPrice() != lowPrice)
 		{
 			sale.setLowPrice(lowPrice);
 			saleCondition = MdEntity.setCondition(saleCondition, Sale.CONDITION_CODE_LOW);
 		}
-		if (openPrice != -1 && sale.getOpenPrice() != openPrice)
+		if (openPrice > 0 && sale.getOpenPrice() != openPrice)
 		{
 			sale.setOpenPrice(openPrice);
 			saleCondition = MdEntity.setCondition(saleCondition, Sale.CONDITION_CODE_OPEN);
 		}
-		if (volume != -1 && sale.getVolume() != volume)
+		if (volume > 0 && sale.getVolume() != volume)
 		{
 			sale.setVolume(volume);
 			saleCondition = MdEntity.setCondition(saleCondition, Sale.CONDITION_CODE_VOLUME);
@@ -309,6 +317,7 @@ public class SaleCache implements IMdServiceCache
 
 		sale.setExchange(exchange);
 		sale.setTimestamp(timestamp);
+		sale.setParticipantTimestamp(participantTimestamp);
 		sale.setNonDisplayablePrice(originalPrice);
 		sale.setNonDisplayableSize(originalSize);
 		sale.setConditionCode(MdEntity.setCondition(saleCondition, MdEntity.CONDITION_FRESH));
@@ -317,8 +326,8 @@ public class SaleCache implements IMdServiceCache
 	}
 
 	public void correctWithStats(String symbol, double originalPrice, int originalSize, String originalCondition, int originalConditionCode, double correctedPrice,
-			int correctedSize, String correctedCondition, int correctedConditionCode, long timestamp, Exchange exchange, double lastPrice, double highPrice, double lowPrice,
-			double openPrice, long volume)
+			int correctedSize, String correctedCondition, int correctedConditionCode, long timestamp, long participantTimestamp, Exchange exchange, double lastPrice,
+			double highPrice, double lowPrice, double openPrice, long volume)
 	{
 		boolean isFirstSale = false;
 		Sale sale = this.sales.get(symbol);
@@ -351,28 +360,28 @@ public class SaleCache implements IMdServiceCache
 		}
 
 		int saleCondition = MdEntity.setCondition(originalConditionCode, Sale.CONDITION_CODE_CORRECTION);
-		if (lastPrice != -1 && sale.getPrice() != lastPrice)
+		if (lastPrice > 0 && sale.getPrice() != lastPrice)
 		{
 			sale.setPrice(lastPrice);
 			sale.setSize(0);
 			saleCondition = MdEntity.setCondition(saleCondition, Sale.CONDITION_CODE_LAST);
 		}
-		if (highPrice != -1 && sale.getHighPrice() != highPrice)
+		if (highPrice > 0 && sale.getHighPrice() != highPrice)
 		{
 			sale.setHighPrice(highPrice);
 			saleCondition = MdEntity.setCondition(saleCondition, Sale.CONDITION_CODE_HIGH);
 		}
-		if (lowPrice != -1 && sale.getLowPrice() != lowPrice)
+		if (lowPrice > 0 && sale.getLowPrice() != lowPrice)
 		{
 			sale.setLowPrice(lowPrice);
 			saleCondition = MdEntity.setCondition(saleCondition, Sale.CONDITION_CODE_LOW);
 		}
-		if (openPrice != -1 && sale.getOpenPrice() != openPrice)
+		if (openPrice > 0 && sale.getOpenPrice() != openPrice)
 		{
 			sale.setOpenPrice(openPrice);
 			saleCondition = MdEntity.setCondition(saleCondition, Sale.CONDITION_CODE_OPEN);
 		}
-		if (volume != -1 && sale.getVolume() != volume)
+		if (volume > 0 && sale.getVolume() != volume)
 		{
 			sale.setVolume(volume);
 			saleCondition = MdEntity.setCondition(saleCondition, Sale.CONDITION_CODE_VOLUME);
@@ -380,6 +389,7 @@ public class SaleCache implements IMdServiceCache
 
 		sale.setExchange(exchange);
 		sale.setTimestamp(timestamp);
+		sale.setParticipantTimestamp(participantTimestamp);
 		sale.setNonDisplayablePrice(originalPrice);
 		sale.setNonDisplayableSize(originalSize);
 		sale.setConditionCode(MdEntity.setCondition(saleCondition, MdEntity.CONDITION_FRESH));
@@ -395,7 +405,7 @@ public class SaleCache implements IMdServiceCache
 		if (this.saleListener != null)
 		{
 			sale = sale.clone();
-			this.saleListener.saleReceived(sale, this.channel);
+			this.saleListener.saleReceived(sale, this.channel, this.index);
 		}
 	}
 
@@ -462,7 +472,7 @@ public class SaleCache implements IMdServiceCache
 			if (this.saleListener != null)
 			{
 				sale = sale.clone();
-				this.saleListener.saleReceived(sale, this.channel);
+				this.saleListener.saleReceived(sale, this.channel, this.index);
 			}
 		}
 		return this.sales.keySet();
