@@ -62,7 +62,8 @@ public class StateCacheMgmt extends AnnotatedMBean<StateCacheMgmtMBean> implemen
 		MarketSession previousSession = (previousState != null) ? previousState.getMarketSession() : null;
 		if (previousState != null && previousSession == session) return "MarketSession is already " + previousSession;
 
-		this.stateCache.updateMarketSession(symbol, primaryListing, isPrimaryListing, session, System.currentTimeMillis());
+		long now = System.currentTimeMillis();
+		this.stateCache.updateMarketSession(symbol, primaryListing, isPrimaryListing, session, now, now);
 		return "Updated MarketSession. Prev=" + previousSession + " New=" + session;
 	}
 
@@ -80,7 +81,8 @@ public class StateCacheMgmt extends AnnotatedMBean<StateCacheMgmtMBean> implemen
 		TradingState previousTradingState = (previousState != null) ? previousState.getTradingState() : null;
 		if (previousState != null && previousTradingState == state) return "TradingState is already " + previousTradingState;
 
-		this.stateCache.updateTradingState(symbol, primaryListing, isPrimaryListing, state, System.currentTimeMillis());
+		long now = System.currentTimeMillis();
+		this.stateCache.updateTradingState(symbol, primaryListing, isPrimaryListing, state, now, now);
 		return "Updated TradingState. Prev=" + previousTradingState + " New=" + state;
 	}
 
@@ -97,7 +99,7 @@ public class StateCacheMgmt extends AnnotatedMBean<StateCacheMgmtMBean> implemen
 		int previousConditionCode = (previousState != null) ? previousState.getConditionCode() : 0;
 		if (previousState != null && previousConditionCode == condition) return "ConditionCode is already " + previousConditionCode;
 
-		this.stateCache.updateConditionCode(symbol, primaryListing, isPrimaryListing, condition, System.currentTimeMillis());
+		this.stateCache.updateConditionCode(symbol, primaryListing, isPrimaryListing, condition, System.currentTimeMillis(), System.currentTimeMillis());
 		return "Updated ConditionCode. Prev=" + previousConditionCode + " New=" + condition;
 	}
 
@@ -110,7 +112,7 @@ public class StateCacheMgmt extends AnnotatedMBean<StateCacheMgmtMBean> implemen
 
 		MarketSession session = MarketSession.getByString(marketSession);
 		if (session == null) return "Unable to find MarketSession for value=" + marketSession;
-		this.stateCache.updateAllSymbols(session, System.currentTimeMillis(), null);
+		this.stateCache.updateAllSymbols(session, System.currentTimeMillis(), System.currentTimeMillis(), null);
 		return "Updated all market sessions to " + session;
 	}
 

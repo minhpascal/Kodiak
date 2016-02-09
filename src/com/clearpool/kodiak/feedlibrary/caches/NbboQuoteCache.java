@@ -19,15 +19,17 @@ public class NbboQuoteCache implements IMdServiceCache
 	private final MdFeed feedType;
 	private final String range;
 	private final int channel;
+	private final int index;
 	private final MdServiceType mdServiceType;
 	private final Map<String, Quote> quotes;
 
-	public NbboQuoteCache(IMdQuoteListener quoteListener, MdFeed feedType, String range, int channel)
+	public NbboQuoteCache(IMdQuoteListener quoteListener, MdFeed feedType, String range, int channel, int index)
 	{
 		this.quoteListener = quoteListener;
 		this.feedType = feedType;
 		this.range = range;
 		this.channel = channel;
+		this.index = index;
 		this.mdServiceType = MdServiceType.NBBO;
 		this.quotes = new HashMap<>();
 	}
@@ -39,7 +41,7 @@ public class NbboQuoteCache implements IMdServiceCache
 	}
 
 	public void updateBidAndOffer(String symbol, double bidPrice, int bidSize, Exchange bidExchange, double askPrice, int askSize, Exchange askExchange, long timestamp,
-			char condition)
+			long participantTimestamp, char condition)
 	{
 		Quote quote = this.quotes.get(symbol);
 		if (quote == null)
@@ -55,12 +57,13 @@ public class NbboQuoteCache implements IMdServiceCache
 		quote.setAskSize(askSize);
 		quote.setAskExchange(askExchange);
 		quote.setTimestamp(timestamp);
+		quote.setParticipantTimestamp(participantTimestamp);
 		quote.setCondition(String.valueOf(condition));
 		quote.setConditionCode(0);
 		sendQuote(quote);
 	}
 
-	public void updateBid(String symbol, double bidPrice, int bidSize, Exchange bidExchange, long timestamp, char condition)
+	public void updateBid(String symbol, double bidPrice, int bidSize, Exchange bidExchange, long timestamp, long participantTimestamp, char condition)
 	{
 		Quote quote = this.quotes.get(symbol);
 		if (quote == null)
@@ -73,12 +76,13 @@ public class NbboQuoteCache implements IMdServiceCache
 		quote.setBidSize(bidSize);
 		quote.setBidExchange(bidExchange);
 		quote.setTimestamp(timestamp);
+		quote.setParticipantTimestamp(participantTimestamp);
 		quote.setCondition(String.valueOf(condition));
 		quote.setConditionCode(0);
 		sendQuote(quote);
 	}
 
-	public void updateOffer(String symbol, double askPrice, int askSize, Exchange askExchange, long timestamp, char condition)
+	public void updateOffer(String symbol, double askPrice, int askSize, Exchange askExchange, long timestamp, long participantTimestamp, char condition)
 	{
 		Quote quote = this.quotes.get(symbol);
 		if (quote == null)
@@ -91,6 +95,7 @@ public class NbboQuoteCache implements IMdServiceCache
 		quote.setAskSize(askSize);
 		quote.setAskExchange(askExchange);
 		quote.setTimestamp(timestamp);
+		quote.setParticipantTimestamp(participantTimestamp);
 		quote.setCondition(String.valueOf(condition));
 		quote.setConditionCode(0);
 		sendQuote(quote);
@@ -105,7 +110,7 @@ public class NbboQuoteCache implements IMdServiceCache
 		if (this.quoteListener != null)
 		{
 			quote = quote.clone();
-			this.quoteListener.quoteReceived(quote, this.channel);
+			this.quoteListener.quoteReceived(quote, this.channel, this.index);
 		}
 	}
 
@@ -145,7 +150,7 @@ public class NbboQuoteCache implements IMdServiceCache
 			if (this.quoteListener != null)
 			{
 				quote = quote.clone();
-				this.quoteListener.quoteReceived(quote, this.channel);
+				this.quoteListener.quoteReceived(quote, this.channel, this.index);
 			}
 		}
 		return this.quotes.keySet();

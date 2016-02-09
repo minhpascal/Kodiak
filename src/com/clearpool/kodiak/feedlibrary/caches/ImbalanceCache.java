@@ -22,15 +22,17 @@ public class ImbalanceCache implements IMdServiceCache
 	private final MdServiceType mdServiceType;
 	private final String range;
 	private final int channel;
+	private final int index;
 	private final Map<String, Imbalance> imbalances;
 
-	public ImbalanceCache(IMdImbalanceListener imbalanceListener, MdFeed feedType, MdServiceType mdServiceType, String range, int channel)
+	public ImbalanceCache(IMdImbalanceListener imbalanceListener, MdFeed feedType, MdServiceType mdServiceType, String range, int channel, int index)
 	{
 		this.imbalanceListener = imbalanceListener;
 		this.feedType = feedType;
 		this.mdServiceType = mdServiceType;
 		this.range = range;
 		this.channel = channel;
+		this.index = index;
 		this.imbalances = new HashMap<String, Imbalance>();
 	}
 
@@ -76,7 +78,7 @@ public class ImbalanceCache implements IMdServiceCache
 		if (this.imbalanceListener != null)
 		{
 			imbalance = imbalance.clone();
-			this.imbalanceListener.imbalanceReceived(imbalance, this.channel);
+			this.imbalanceListener.imbalanceReceived(imbalance, this.channel, this.index);
 		}
 	}
 
@@ -122,7 +124,7 @@ public class ImbalanceCache implements IMdServiceCache
 			if (this.imbalanceListener != null)
 			{
 				imbalance = imbalance.clone();
-				this.imbalanceListener.imbalanceReceived(imbalance, this.channel);
+				this.imbalanceListener.imbalanceReceived(imbalance, this.channel, this.index);
 			}
 		}
 		return this.imbalances.keySet();

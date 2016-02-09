@@ -24,24 +24,26 @@ public class MdSocketSelector extends Thread
 	protected final Selector selector;
 	private final ByteBuffer udpBuffer;
 	protected final int recvBufferSize;
+	private final boolean spinning;
 
-	public MdSocketSelector(String name, int recvBufferSize) throws IOException
+	public MdSocketSelector(String name, int recvBufferSize, boolean spinning) throws IOException
 	{
 		this.recvBufferSize = recvBufferSize;
 		this.selector = Selector.open();
 		this.udpBuffer = ByteBuffer.allocateDirect(1500);
+		this.spinning = spinning;
 		this.setName("MdSocketSelector-" + name);
 	}
 
 	@Override
 	public void run()
 	{
-		while (!Thread.currentThread().isInterrupted())
+		while (true)
 		{
 			try
 			{
 				// Do selection
-				int selectedKeyCount = this.selector.select();
+				int selectedKeyCount = (this.spinning) ? this.selector.selectNow() : this.selector.select();
 				if (selectedKeyCount > 0)
 				{
 					Iterator<SelectionKey> selectionKeyIterator = this.selector.selectedKeys().iterator();
@@ -62,7 +64,6 @@ public class MdSocketSelector extends Thread
 				LOGGER.log(Level.SEVERE, e.getMessage(), e);
 			}
 		}
-		LOGGER.warning("SelectorThread has been interrupted.  Stopping selection for selector");
 	}
 
 	protected void handleMulticastSelection(SelectionKey selectedKey)
@@ -100,7 +101,8 @@ public class MdSocketSelector extends Thread
 			NetworkInterface networkInterface = NetworkInterface.getByInetAddress(InetAddress.getByName(interfaceIp));
 			channel.setOption(StandardSocketOptions.IP_MULTICAST_IF, networkInterface);
 			InetAddress address = InetAddress.getByName(ip);
-			channel.bind(new InetSocketAddress(address, port));
+			if (System.getProperty("os.name").contains("Windows")) channel.bind(new InetSocketAddress(port));
+			else channel.bind(new InetSocketAddress(address, port));
 			channel.setOption(StandardSocketOptions.SO_RCVBUF, Integer.valueOf(this.recvBufferSize));
 			SelectionKey key = channel.register(this.selector, SelectionKey.OP_READ, attachment);
 			channel.join(address, networkInterface);

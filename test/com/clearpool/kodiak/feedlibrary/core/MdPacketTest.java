@@ -3,7 +3,6 @@ package com.clearpool.kodiak.feedlibrary.core;
 import java.nio.ByteBuffer;
 
 import org.junit.Assert;
-
 import org.junit.Test;
 
 @SuppressWarnings("static-method")

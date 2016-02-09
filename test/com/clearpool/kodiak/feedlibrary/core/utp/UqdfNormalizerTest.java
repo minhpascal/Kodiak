@@ -15,8 +15,6 @@ import com.clearpool.kodiak.feedlibrary.core.MdFeed;
 import com.clearpool.kodiak.feedlibrary.core.MdFeedProps;
 import com.clearpool.kodiak.feedlibrary.core.TestMDQuoteListener;
 import com.clearpool.kodiak.feedlibrary.core.TestMDStateListener;
-import com.clearpool.kodiak.feedlibrary.core.utp.UqdfNormalizer;
-import com.clearpool.kodiak.feedlibrary.core.utp.UtpPacket;
 import com.clearpool.kodiak.feedlibrary.utils.ByteBufferUtil;
 import com.clearpool.messageobjects.marketdata.Exchange;
 import com.clearpool.messageobjects.marketdata.MarketSession;
@@ -43,7 +41,7 @@ public class UqdfNormalizerTest
 		HashMap<String, Integer> lotsize = new HashMap<String, Integer>();
 		lotsize.put("SYED", new Integer(10));
 		MdFeedProps.putInstanceProperty(lotsize, MdFeed.UQDF.toString(), "LOTSIZES");
-		this.normalizer = new UqdfNormalizer(callbacks, "", 0) {
+		this.normalizer = new UqdfNormalizer(callbacks, "", 0, 0) {
 			@Override
 			public MarketSession getMarketSession(char primaryListing, boolean isPrimaryListing, long timestamp)
 			{
@@ -93,7 +91,7 @@ public class UqdfNormalizerTest
 		callbacks.put(MdServiceType.BBO, this.bboListener);
 		callbacks.put(MdServiceType.NBBO, this.nbboListener);
 		callbacks.put(MdServiceType.STATE, this.stateListener);
-		UqdfNormalizer n = new UqdfNormalizer(callbacks, "", 0) {
+		UqdfNormalizer n = new UqdfNormalizer(callbacks, "", 0, 0) {
 			@Override
 			public MarketSession getMarketSession(char primaryListing, boolean isPrimaryListing, long timestamp)
 			{

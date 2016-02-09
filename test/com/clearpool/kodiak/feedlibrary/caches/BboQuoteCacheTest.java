@@ -17,7 +17,7 @@ public class BboQuoteCacheTest
 	@Before
 	public void setUp()
 	{
-		this.bboQuoteCache = new BboQuoteCache(null, MdFeed.CQS, "[A-Z]", 1);
+		this.bboQuoteCache = new BboQuoteCache(null, MdFeed.CQS, "[A-Z]", 1, 1);
 	}
 
 	@Test
@@ -25,9 +25,11 @@ public class BboQuoteCacheTest
 	{
 		Map<Exchange, Quote> bboQuotes = null;
 		Quote bboQuote = null;
+		long now = 0;
 
 		// Process first quote
-		this.bboQuoteCache.updateBidAndOffer("TEST", Exchange.USEQ_BATS_EXCHANGE, 10.0, 100, 11.0, 100, System.currentTimeMillis(), 0);
+		now = System.currentTimeMillis();
+		this.bboQuoteCache.updateBidAndOffer("TEST", Exchange.USEQ_BATS_EXCHANGE, 10.0, 100, 11.0, 100, now, now, 0);
 		bboQuotes = this.bboQuoteCache.getData("TEST");
 		Assert.assertNotNull(bboQuotes);
 		bboQuote = bboQuotes.get(Exchange.USEQ_BATS_EXCHANGE);
@@ -35,7 +37,8 @@ public class BboQuoteCacheTest
 		Assert.assertEquals(1, bboQuote.getSymbolSequenceNumber());
 
 		// Process second quote
-		this.bboQuoteCache.updateBidAndOffer("TEST", Exchange.USEQ_BATS_EXCHANGE, 10.0, 200, 11.0, 200, System.currentTimeMillis(), 0);
+		now = System.currentTimeMillis();
+		this.bboQuoteCache.updateBidAndOffer("TEST", Exchange.USEQ_BATS_EXCHANGE, 10.0, 200, 11.0, 200, now, now, 0);
 		bboQuotes = this.bboQuoteCache.getData("TEST");
 		Assert.assertNotNull(bboQuotes);
 		bboQuote = bboQuotes.get(Exchange.USEQ_BATS_EXCHANGE);
@@ -48,9 +51,11 @@ public class BboQuoteCacheTest
 	{
 		Map<Exchange, Quote> bboQuotes = null;
 		Quote bboQuote = null;
+		long now = 0;
 
 		// Process first quote
-		this.bboQuoteCache.updateBidAndOffer("TEST", Exchange.USEQ_BATS_EXCHANGE, 10.0, 100, 11.0, 100, System.currentTimeMillis(), 0);
+		now = System.currentTimeMillis();
+		this.bboQuoteCache.updateBidAndOffer("TEST", Exchange.USEQ_BATS_EXCHANGE, 10.0, 100, 11.0, 100, now, now, 0);
 		bboQuotes = this.bboQuoteCache.getData("TEST");
 		Assert.assertNotNull(bboQuotes);
 		bboQuote = bboQuotes.get(Exchange.USEQ_BATS_EXCHANGE);
@@ -58,7 +63,8 @@ public class BboQuoteCacheTest
 		Assert.assertEquals(1, bboQuote.getSymbolSequenceNumber());
 
 		// Process second quote
-		this.bboQuoteCache.updateBidAndOffer("TEST", Exchange.USEQ_EDGA_EXCHANGE, 10.0, 200, 11.0, 200, System.currentTimeMillis(), 0);
+		now = System.currentTimeMillis();
+		this.bboQuoteCache.updateBidAndOffer("TEST", Exchange.USEQ_EDGA_EXCHANGE, 10.0, 200, 11.0, 200, now, now, 0);
 		bboQuotes = this.bboQuoteCache.getData("TEST");
 		Assert.assertNotNull(bboQuotes);
 		Assert.assertEquals(2, bboQuotes.size());

@@ -45,10 +45,10 @@ public class UtdfNormalizer implements IMdNormalizer
 
 	private boolean receivedEndOfLastSaleEligibleControlMessage;
 
-	public UtdfNormalizer(Map<MdServiceType, IMdLibraryCallback> callbacks, String range, int channel)
+	public UtdfNormalizer(Map<MdServiceType, IMdLibraryCallback> callbacks, String range, int channel, int index)
 	{
 		this.range = range;
-		this.sales = new SaleCache((IMdSaleListener) callbacks.get(MdServiceType.SALE), MdFeed.UTDF, range, channel, false);
+		this.sales = new SaleCache((IMdSaleListener) callbacks.get(MdServiceType.SALE), MdFeed.UTDF, range, channel, index, false);
 		this.tmpBuffer4 = new byte[4];
 		this.tmpBuffer5 = new byte[5];
 		this.tmpBuffer11 = new byte[11];
@@ -76,7 +76,8 @@ public class UtdfNormalizer implements IMdNormalizer
 					String symbol = entry.getKey();
 					if (firstRange.compareTo(symbol) <= 0 && symbol.compareTo(secondRange) <= 0)
 					{
-						this.sales.setLatestClosePrice(symbol, Exchange.USEQ_SIP, entry.getValue().doubleValue(), DateUtil.TODAY_MIDNIGHT_EST.getTime(), "SDS", false);
+						this.sales.setLatestClosePrice(symbol, Exchange.USEQ_SIP, entry.getValue().doubleValue(), DateUtil.TODAY_MIDNIGHT_EST.getTime(),
+								DateUtil.TODAY_MIDNIGHT_EST.getTime(), "SDS", false);
 					}
 				}
 			}
@@ -98,6 +99,7 @@ public class UtdfNormalizer implements IMdNormalizer
 		char msgType = utpPacket.getMessageType();
 		char participantId = utpPacket.getParticipantId();
 		long timestamp = utpPacket.getTimestamp();
+		long participantTimestamp = utpPacket.getParticipantTimestamp();
 		ByteBuffer buffer = utpPacket.getBuffer();
 
 		if (msgCategory == CATEGORY_TRADE)
@@ -115,8 +117,9 @@ public class UtdfNormalizer implements IMdNormalizer
 				int size = (int) ByteBufferUtil.readAsciiLong(buffer, isLong ? 9 : 6);
 				ByteBufferUtil.advancePosition(buffer, 1); // consolidated price change indicator
 
-				this.sales.updateWithSaleCondition(symbol, price, size, UtpUtils.getExchange(participantId), timestamp,
-						getSaleConditions(saleCondition, this.sales.getData(symbol), participantId == NASDAQ_PARTICIPANT), saleCondition);
+				this.sales.updateWithSaleCondition(symbol, price, size, UtpUtils.getExchange(participantId), timestamp, participantTimestamp,
+						getSaleConditions(saleCondition, this.sales.getData(symbol), participantId == NASDAQ_PARTICIPANT, this.receivedEndOfLastSaleEligibleControlMessage),
+						saleCondition);
 			}
 			else if (msgType == TYPE_CORRECTION)
 			{
@@ -148,9 +151,10 @@ public class UtdfNormalizer implements IMdNormalizer
 				ByteBufferUtil.advancePosition(buffer, 1); // consolidatedPriceChangeIndicator
 
 				this.sales.correctWithStats(symbol, originalPrice, originalSize, originalSaleCondition,
-						getSaleConditions(originalSaleCondition, null, participantId == NASDAQ_PARTICIPANT), correctedPrice, correctedSize, correctedSaleCondition,
-						getSaleConditions(correctedSaleCondition, null, participantId == NASDAQ_PARTICIPANT), timestamp, lastExchange, lastPrice, highPrice, lowPrice, -1,
-						consolidatedVolume);
+						getSaleConditions(originalSaleCondition, null, participantId == NASDAQ_PARTICIPANT, this.receivedEndOfLastSaleEligibleControlMessage), correctedPrice,
+						correctedSize, correctedSaleCondition,
+						getSaleConditions(correctedSaleCondition, null, participantId == NASDAQ_PARTICIPANT, this.receivedEndOfLastSaleEligibleControlMessage), timestamp,
+						participantTimestamp, lastExchange, lastPrice, highPrice, lowPrice, -1, consolidatedVolume);
 				LOGGER.info(processorName + " - Received Correction Message - Symbol=" + symbol + " orig=" + originalPrice + "@" + originalSize + " (origiSeqNo="
 						+ originalSequenceNumber + ") corrected=" + correctedPrice + "@" + correctedSize);
 			}
@@ -177,8 +181,8 @@ public class UtdfNormalizer implements IMdNormalizer
 				ByteBufferUtil.advancePosition(buffer, 1); // consolidatedPriceChangeIndicator
 
 				this.sales.cancelWithStats(symbol, originalPrice, originalSize, originalSaleCondition,
-						getSaleConditions(originalSaleCondition, null, participantId == NASDAQ_PARTICIPANT), timestamp, lastExchange, lastPrice, highPrice, lowPrice, -1,
-						consolidatedVolume);
+						getSaleConditions(originalSaleCondition, null, participantId == NASDAQ_PARTICIPANT, this.receivedEndOfLastSaleEligibleControlMessage), timestamp,
+						participantTimestamp, lastExchange, lastPrice, highPrice, lowPrice, -1, consolidatedVolume);
 				LOGGER.info(processorName + " - Received Cancel Message - Symbol=" + symbol + " orig=" + originalPrice + "@" + originalSize + " (origiSeqNo="
 						+ originalSequenceNumber + ")");
 			}
@@ -193,8 +197,8 @@ public class UtdfNormalizer implements IMdNormalizer
 				{
 					String[] spaceSplit = message.split(" ");
 					String priceString = spaceSplit[5];
-					this.sales.setLatestClosePrice(spaceSplit[4], Exchange.USEQ_SIP, Integer.parseInt(priceString.substring(0, priceString.indexOf("."))) / 100d, timestamp, "SDS",
-							true);
+					this.sales.setLatestClosePrice(spaceSplit[4], Exchange.USEQ_SIP, Integer.parseInt(priceString.substring(0, priceString.indexOf("."))) / 100d, timestamp,
+							participantTimestamp, "SDS", true);
 				}
 			}
 			else if (msgType == TYPE_CLOSING_TRADE_SUMMARY_REPORT)
@@ -213,7 +217,7 @@ public class UtdfNormalizer implements IMdNormalizer
 				int numberOfMarketCenters = (int) ByteBufferUtil.readAsciiLong(buffer, 2);
 				ByteBufferUtil.advancePosition(buffer, numberOfMarketCenters * 24);
 
-				this.sales.updateEndofDay(symbol, closingPrice, lowPrice, highPrice, consolidatedVolume, timestamp, closingPriceExchange);
+				this.sales.updateEndofDay(symbol, closingPrice, lowPrice, highPrice, consolidatedVolume, timestamp, participantTimestamp, closingPriceExchange);
 			}
 		}
 		else if (msgCategory == CATEGORY_CONTROL)
@@ -223,46 +227,49 @@ public class UtdfNormalizer implements IMdNormalizer
 		}
 	}
 
-	private int getSaleConditions(String saleConditions, Sale previousSale, boolean isPrimary)
+	static int getSaleConditions(String saleConditions, Sale previousSale, boolean isPrimary, boolean receivedEndOfLastSaleEligibleControlMessage)
 	{
 		int conditionCode = 0;
 		boolean marketCenterClose = false;
 		boolean marketCenterCloseUpdate = false;
 		boolean marketCenterOpen = false;
+		boolean openingAuctionPrint = false;
+		boolean closingAuctionPrint = false;
 		for (int i = 0; i < saleConditions.length(); i++)
 		{
 			char saleCondition = saleConditions.charAt(i);
 			marketCenterClose |= saleCondition == 'M';
 			marketCenterCloseUpdate |= saleCondition == '9';
 			marketCenterOpen |= (saleCondition == 'Q');
-			int charCondition = getCharSaleCondition(saleCondition, previousSale);
+			openingAuctionPrint |= (saleCondition == 'O');
+			closingAuctionPrint |= (saleCondition == '6');
+			int charCondition = getCharSaleCondition(saleCondition, previousSale, receivedEndOfLastSaleEligibleControlMessage);
 			if (charCondition > 0)
 			{
 				if (conditionCode > 0) conditionCode &= charCondition;
 				else conditionCode = charCondition;
 			}
 		}
-		conditionCode = ((marketCenterClose && (previousSale == null || previousSale.getLatestClosePrice() == 0)) || marketCenterCloseUpdate) ? MdEntity.setCondition(
-				conditionCode, Sale.CONDITION_CODE_LATEST_CLOSE) : conditionCode;
+		conditionCode = (openingAuctionPrint) ? MdEntity.setCondition(conditionCode, Sale.CONDITION_CODE_OPEN_AUCTION_SUMMARY) : conditionCode;
+		conditionCode = (closingAuctionPrint) ? MdEntity.setCondition(conditionCode, Sale.CONDITION_CODE_CLOSE_AUCTION_SUMMARY) : conditionCode;
+		conditionCode = ((marketCenterClose || marketCenterCloseUpdate) && isPrimary) ? MdEntity.setCondition(conditionCode, Sale.CONDITION_CODE_LATEST_CLOSE) : conditionCode;
 		conditionCode = (marketCenterOpen && isPrimary) ? MdEntity.setCondition(conditionCode, Sale.CONDITION_CODE_OPEN) : conditionCode;
 		if (marketCenterOpen || marketCenterClose || marketCenterCloseUpdate)
 			conditionCode = MdEntity.unsetCondition(conditionCode, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME);
 		return conditionCode;
 	}
 
-	private int getCharSaleCondition(char charSaleCondition, Sale previousSale)
+	private static int getCharSaleCondition(char charSaleCondition, Sale previousSale, boolean receivedEndOfLastSaleEligibleControlMessage)
 	{
 		boolean noteOne = (previousSale == null || previousSale.getPrice() == 0);
-		boolean noteTwo = !this.receivedEndOfLastSaleEligibleControlMessage;
+		boolean noteTwo = !receivedEndOfLastSaleEligibleControlMessage;
 
 		switch (charSaleCondition)
 		{
 			case 'O':
-				return MdEntity.setCondition(0, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME, Sale.CONDITION_CODE_HIGH, Sale.CONDITION_CODE_LOW, Sale.CONDITION_CODE_LAST,
-						Sale.CONDITION_CODE_OPEN_AUCTION_SUMMARY);
+				return MdEntity.setCondition(0, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME, Sale.CONDITION_CODE_HIGH, Sale.CONDITION_CODE_LOW, Sale.CONDITION_CODE_LAST);
 			case '6':
-				return MdEntity.setCondition(0, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME, Sale.CONDITION_CODE_HIGH, Sale.CONDITION_CODE_LOW, Sale.CONDITION_CODE_LAST,
-						Sale.CONDITION_CODE_CLOSE_AUCTION_SUMMARY);
+				return MdEntity.setCondition(0, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME, Sale.CONDITION_CODE_HIGH, Sale.CONDITION_CODE_LOW, Sale.CONDITION_CODE_LAST);
 			case '@':
 			case 'A':
 			case 'B':
@@ -270,7 +277,6 @@ public class UtdfNormalizer implements IMdNormalizer
 			case 'F':
 			case 'K':
 			case 'S':
-			case 'V':
 			case 'X':
 			case 'Y':
 			case '1':
@@ -293,7 +299,9 @@ public class UtdfNormalizer implements IMdNormalizer
 				return MdEntity.setCondition(0, Sale.CONDITION_CODE_VOLUME, Sale.CONDITION_CODE_HIGH, Sale.CONDITION_CODE_LOW);
 			case 'H':
 			case 'N':
+			case 'V':
 			case 'W':
+			case '7':
 				return MdEntity.setCondition(0, Sale.CONDITION_CODE_VOLUME);
 			case 'L':
 			case '2':

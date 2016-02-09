@@ -4,6 +4,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.clearpool.kodiak.feedlibrary.callbacks.IMdSaleListener;
+import com.clearpool.kodiak.feedlibrary.core.KodiakSelectorType;
 import com.clearpool.kodiak.feedlibrary.core.MdFeed;
 import com.clearpool.kodiak.feedlibrary.core.MdLibrary;
 import com.clearpool.kodiak.feedlibrary.core.MdLibraryContext;
@@ -16,7 +17,7 @@ public class UtdfTest implements IMdSaleListener
 
 	public UtdfTest() throws Exception
 	{
-		MdLibraryContext context = new MdLibraryContext(false, 1, false, 0, true);
+		MdLibraryContext context = new MdLibraryContext(false, 1, KodiakSelectorType.BLOCKING, 0, true);
 		MdLibrary utdfLibrary = new MdLibrary(context, MdFeed.UTDF, new String[] { "1" }, "127.0.0.1", "127.0.0.1", "C:\\utp");
 		utdfLibrary.registerService(MdServiceType.SALE, this);
 		utdfLibrary.initProcessors();
@@ -24,7 +25,7 @@ public class UtdfTest implements IMdSaleListener
 	}
 
 	@Override
-	public void saleReceived(Sale sale, int channel)
+	public void saleReceived(Sale sale, int channel, int index)
 	{
 		System.out.println(MdServiceType.SALE + " " + sale);
 	}

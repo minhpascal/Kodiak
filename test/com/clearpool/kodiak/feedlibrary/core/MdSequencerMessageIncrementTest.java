@@ -4,8 +4,6 @@ package com.clearpool.kodiak.feedlibrary.core;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.clearpool.kodiak.feedlibrary.core.MdSequencer;
-
 @SuppressWarnings("static-method")
 public class MdSequencerMessageIncrementTest
 {

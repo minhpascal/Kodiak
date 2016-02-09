@@ -31,7 +31,7 @@ public class MdLogger
 
 	public MdLogger(String feed, String[] lines, String networkIp, String logDirectory, boolean isPrimary) throws IOException
 	{
-		this.selector = new MdSocketSelector(feed + " Logger Selector Thread", 8388608);
+		this.selector = new MdSocketSelector(feed + " Logger Selector Thread", 8388608, false);
 		this.processors = new LinkedList<MDLoggerProcessor>();
 		this.timer = new Timer();
 		registerProcessors(feed, lines, networkIp, logDirectory, isPrimary);

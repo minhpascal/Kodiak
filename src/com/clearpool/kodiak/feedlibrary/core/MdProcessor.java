@@ -132,7 +132,7 @@ public class MdProcessor implements ISelectable, ISequenceMessageReceivable
 	@Override
 	public void sequenceMessageReceived(MdFeedPacket packet, boolean shouldIgnore)
 	{
-		this.normalizer.processMessage(this.processorName, packet, shouldIgnore);
+		if (this.normalizer != null) this.normalizer.processMessage(this.processorName, packet, shouldIgnore);
 		if (packet.isEndOfTransmission())
 		{
 			handleEndOfTransmission();

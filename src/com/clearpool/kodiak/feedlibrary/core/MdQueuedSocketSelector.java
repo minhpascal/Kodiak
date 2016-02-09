@@ -17,9 +17,9 @@ public class MdQueuedSocketSelector extends MdSocketSelector
 
 	private final BlockingQueue<MdSelection> selectionQueue;
 
-	public MdQueuedSocketSelector(String name, int recvBufferSize) throws IOException
+	public MdQueuedSocketSelector(String name, int recvBufferSize, boolean spinning) throws IOException
 	{
-		super(name, recvBufferSize);
+		super(name, recvBufferSize, spinning);
 		this.selectionQueue = new LinkedBlockingQueue<MdSelection>();
 		SelectionDeliveryThread selectionDeliveryThread = new SelectionDeliveryThread(this.selectionQueue);
 		selectionDeliveryThread.start();

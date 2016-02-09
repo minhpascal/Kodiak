@@ -15,6 +15,7 @@ public class UtpPacket extends MdFeedPacket
 	private char messageType;
 	private char participantId;
 	private long timestamp;
+	private long participantTimestamp;
 
 	public UtpPacket(long selectionTimeNanos)
 	{
@@ -26,11 +27,24 @@ public class UtpPacket extends MdFeedPacket
 	{
 		this.messageCategory = (char) this.buffer.get();
 		this.messageType = (char) this.buffer.get();
-		ByteBufferUtil.advancePosition(this.buffer, 3); // session identifier, retrans requester
+		byte sessionIdentifier = this.buffer.get();
+		ByteBufferUtil.advancePosition(this.buffer, 2); // retrans requester
 		this.sequenceNumber = ByteBufferUtil.readAsciiLong(this.buffer, 8);
 		this.participantId = (char) this.buffer.get();
-		this.timestamp = readTimestamp(this.buffer);
-		ByteBufferUtil.advancePosition(this.buffer, 1); // reserved
+		if (sessionIdentifier == '1')
+		{
+			this.timestamp = readMicroSecondsSinceMidnight(this.buffer);
+			ByteBufferUtil.advancePosition(this.buffer, 4); // reserved
+			this.participantTimestamp = readMicroSecondsSinceMidnight(this.buffer); // timestamp1
+			ByteBufferUtil.advancePosition(this.buffer, 6); // timestamp2
+			ByteBufferUtil.advancePosition(this.buffer, 7); // transaction ID
+		}
+		else
+		{
+			this.timestamp = readTimestamp(this.buffer);
+			ByteBufferUtil.advancePosition(this.buffer, 1); // reserved
+		}
+
 		this.messageCount = 1;
 	}
 
@@ -41,6 +55,13 @@ public class UtpPacket extends MdFeedPacket
 		int seconds = (int) ByteBufferUtil.readAsciiLong(buffer, 2);
 		long millis = ByteBufferUtil.readAsciiLong(buffer, 3);
 		return TODAY + (hours * DateUtil.MILLIS_PER_HOUR) + (mins * DateUtil.MILLIS_PER_MINUTE) + (seconds * DateUtil.MILLIS_PER_SECOND) + millis;
+	}
+
+	private static long readMicroSecondsSinceMidnight(ByteBuffer buffer)
+	{
+		long microsSinceMidnight = ByteBufferUtil.readBase95Long(buffer, 6);
+		long millisSinceMidnight = microsSinceMidnight / 1000;
+		return TODAY + millisSinceMidnight;
 	}
 
 	public char getMessageCategory()
@@ -61,6 +82,11 @@ public class UtpPacket extends MdFeedPacket
 	public long getTimestamp()
 	{
 		return this.timestamp;
+	}
+
+	public long getParticipantTimestamp()
+	{
+		return this.participantTimestamp;
 	}
 
 	@Override

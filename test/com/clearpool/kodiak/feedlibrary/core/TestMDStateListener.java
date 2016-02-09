@@ -12,7 +12,7 @@ public class TestMDStateListener implements IMdStateListener
 	private final Queue<MarketState> queue = new LinkedList<MarketState>();
 
 	@Override
-	public void stateReceived(MarketState state, int channel)
+	public void stateReceived(MarketState state, int channel, int index)
 	{
 		this.queue.add(state);
 	}

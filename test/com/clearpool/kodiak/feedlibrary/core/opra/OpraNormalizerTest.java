@@ -3,8 +3,6 @@ package com.clearpool.kodiak.feedlibrary.core.opra;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.clearpool.kodiak.feedlibrary.core.opra.OpraNormalizer;
-
 @SuppressWarnings("static-method")
 public class OpraNormalizerTest
 {

@@ -2,8 +2,6 @@ package com.clearpool.kodiak.feedlibrary.core;
 
 import java.nio.ByteBuffer;
 
-import com.clearpool.kodiak.feedlibrary.core.MdFeedPacket;
-
 public class TestMdFeedPacket extends MdFeedPacket
 {
 	private final boolean isSequenceNumberReset;

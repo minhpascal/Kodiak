@@ -43,10 +43,10 @@ public class CtsNormalizer implements IMdNormalizer
 	private final byte[] tmpBuffer4;
 	private final byte[] tmpBuffer11;
 
-	public CtsNormalizer(Map<MdServiceType, IMdLibraryCallback> callbacks, String range, int channel)
+	public CtsNormalizer(Map<MdServiceType, IMdLibraryCallback> callbacks, String range, int channel, int index)
 	{
 		this.range = range;
-		this.sales = new SaleCache((IMdSaleListener) callbacks.get(MdServiceType.SALE), MdFeed.CTS, range, channel, false);
+		this.sales = new SaleCache((IMdSaleListener) callbacks.get(MdServiceType.SALE), MdFeed.CTS, range, channel, index, false);
 		this.tmpBuffer3 = new byte[3];
 		this.tmpBuffer4 = new byte[4];
 		this.tmpBuffer11 = new byte[11];
@@ -59,7 +59,7 @@ public class CtsNormalizer implements IMdNormalizer
 		Object closePrices = MdFeedProps.getInstanceProperty(MdFeed.CTS.toString(), "CLOSEPRICES");
 
 		HashMap<String, Double> prices = (HashMap<String, Double>) closePrices;
-		if (prices.size() > 0)
+		if (prices != null && prices.size() > 0)
 		{
 			String[] rangeSplit = this.range.split("-");
 			String firstRange = rangeSplit[0].replace("[", "");
@@ -70,7 +70,8 @@ public class CtsNormalizer implements IMdNormalizer
 				String symbol = entry.getKey();
 				if (firstRange.compareTo(symbol) <= 0 && symbol.compareTo(secondRange) <= 0)
 				{
-					this.sales.setLatestClosePrice(symbol, Exchange.USEQ_SIP, entry.getValue().doubleValue(), DateUtil.TODAY_MIDNIGHT_EST.getTime(), "SDS", false);
+					this.sales.setLatestClosePrice(symbol, Exchange.USEQ_SIP, entry.getValue().doubleValue(), DateUtil.TODAY_MIDNIGHT_EST.getTime(),
+							DateUtil.TODAY_MIDNIGHT_EST.getTime(), "SDS", false);
 				}
 			}
 		}
@@ -91,6 +92,7 @@ public class CtsNormalizer implements IMdNormalizer
 		char msgType = ctaPacket.getMessageType();
 		char participantId = ctaPacket.getParticipantId();
 		long timestamp = ctaPacket.getTimestamp();
+		long participantTimestamp = ctaPacket.getParticipantTimestamp();
 		ByteBuffer buffer = ctaPacket.getBuffer();
 
 		if (msgCategory == CATEGORY_BOND || msgCategory == CATEGORY_LOCAL) return;
@@ -126,7 +128,8 @@ public class CtsNormalizer implements IMdNormalizer
 					ByteBufferUtil.advancePosition(buffer, 3); // consolidated high/low/last price indicator, participant open/high/low/last price indicator, reserved
 				}
 				this.sales.updateWithSaleCondition(symbol, CtaUtils.getPrice(tradePrice, priceDenominatorIndicator), tradeVolume, CtaUtils.getExchange(participantId, null),
-						timestamp, getSaleConditions(saleConditions, this.sales.getData(symbol), participantId, participantId == primaryListing), saleConditions);
+						timestamp, participantTimestamp, getSaleConditions(saleConditions, this.sales.getData(symbol), participantId, participantId == primaryListing),
+						saleConditions);
 			}
 			else if (msgType == TYPE_CORRECTION)
 			{
@@ -163,8 +166,8 @@ public class CtsNormalizer implements IMdNormalizer
 
 				this.sales.correctWithStats(symbol, originalPrice, originalTradeVolume, originalSaleCondition,
 						getSaleConditions(originalSaleCondition, null, participantId, primaryListing == participantId), correctedPrice, correctedTradeVolume,
-						correctedSaleCondition, getSaleConditions(correctedSaleCondition, null, participantId, primaryListing == participantId), timestamp, lastExchange,
-						lastPrice, highPrice, lowPrice, openPrice, totalVolume);
+						correctedSaleCondition, getSaleConditions(correctedSaleCondition, null, participantId, primaryListing == participantId), timestamp, participantTimestamp,
+						lastExchange, lastPrice, highPrice, lowPrice, openPrice, totalVolume);
 				LOGGER.info(processorName + " - Received Correction Message - Symbol=" + symbol + " orig=" + originalPrice + "@" + originalTradeVolume + " (origiSeqNo="
 						+ sequenceNumber + ") corrected=" + correctedPrice + "@" + correctedTradeVolume);
 			}
@@ -197,8 +200,8 @@ public class CtsNormalizer implements IMdNormalizer
 				ByteBufferUtil.advancePosition(buffer, 38); // high price denominator, high price, low price denominator, low price, reserved
 
 				this.sales.cancelWithStats(symbol, originalPrice, originalTradeVolume, originalSaleCondition,
-						getSaleConditions(originalSaleCondition, null, participantId, primaryListing == participantId), timestamp, lastExchange, lastPrice, highPrice, lowPrice,
-						openPrice, totalVolume);
+						getSaleConditions(originalSaleCondition, null, participantId, primaryListing == participantId), timestamp, participantTimestamp, lastExchange, lastPrice,
+						highPrice, lowPrice, openPrice, totalVolume);
 				LOGGER.info(processorName + " - Received Cancel Message - Symbol=" + symbol + " orig=" + originalPrice + "@" + originalTradeVolume + " (origiSeqNo="
 						+ sequenceNumber + ")");
 			}
@@ -217,7 +220,7 @@ public class CtsNormalizer implements IMdNormalizer
 				long totalVolume = ByteBufferUtil.readAsciiLong(buffer, 11);
 				ByteBufferUtil.advancePosition(buffer, 13); // reserved, numberParticipants
 
-				this.sales.updateEndofDay(symbol, closePrice, lowPrice, highPrice, totalVolume, timestamp, exchange);
+				this.sales.updateEndofDay(symbol, closePrice, lowPrice, highPrice, totalVolume, timestamp, participantTimestamp, exchange);
 			}
 			else if (msgType == TYPE_START_OF_DAY_SUMMARY)
 			{
@@ -230,7 +233,7 @@ public class CtsNormalizer implements IMdNormalizer
 				int numberOfIterations = (int) ByteBufferUtil.readAsciiLong(buffer, 2);
 				ByteBufferUtil.advancePosition(buffer, numberOfIterations * 30);
 
-				this.sales.setLatestClosePrice(symbol, exchange, previousClosePrice, timestamp, "SDS", true);
+				this.sales.setLatestClosePrice(symbol, exchange, previousClosePrice, timestamp, participantTimestamp, "SDS", true);
 			}
 		}
 		else if (msgCategory == CATEGORY_ADMIN)
@@ -263,18 +266,22 @@ public class CtsNormalizer implements IMdNormalizer
 		}
 	}
 
-	private static int getSaleConditions(String saleConditions, Sale previousSale, char participantId, boolean isPrimary)
+	static int getSaleConditions(String saleConditions, Sale previousSale, char participantId, boolean isPrimary)
 	{
 		int conditionCode = 0;
 		boolean marketCenterClose = false;
 		boolean marketCenterCloseUpdate = false;
 		boolean marketCenterOpen = false;
+		boolean openingAuctionPrint = false;
+		boolean closingAuctionPrint = false;
 		for (int i = 0; i < saleConditions.length(); i++)
 		{
 			char saleCondition = saleConditions.charAt(i);
 			marketCenterClose |= saleCondition == 'M';
 			marketCenterCloseUpdate |= saleCondition == '9';
 			marketCenterOpen |= (saleCondition == 'Q');
+			openingAuctionPrint |= (saleCondition == 'O');
+			closingAuctionPrint |= (saleCondition == '6');
 			int charCondition = getCharSaleCondition(saleCondition, previousSale, participantId, isPrimary);
 			if (charCondition > 0)
 			{
@@ -282,9 +289,11 @@ public class CtsNormalizer implements IMdNormalizer
 				else conditionCode = charCondition;
 			}
 		}
-		conditionCode = ((marketCenterClose && (previousSale == null || previousSale.getLatestClosePrice() == 0)) || marketCenterCloseUpdate) ? MdEntity.setCondition(
-				conditionCode, Sale.CONDITION_CODE_LATEST_CLOSE) : conditionCode;
-		conditionCode = (marketCenterOpen && isPrimary) ? MdEntity.setCondition(conditionCode, Sale.CONDITION_CODE_OPEN) : conditionCode;
+		conditionCode = (openingAuctionPrint) ? MdEntity.setCondition(conditionCode, Sale.CONDITION_CODE_OPEN_AUCTION_SUMMARY) : conditionCode;
+		conditionCode = (closingAuctionPrint) ? MdEntity.setCondition(conditionCode, Sale.CONDITION_CODE_CLOSE_AUCTION_SUMMARY) : conditionCode;
+		conditionCode = ((marketCenterClose || marketCenterCloseUpdate || closingAuctionPrint) && isPrimary) ? MdEntity.setCondition(conditionCode,
+				Sale.CONDITION_CODE_LATEST_CLOSE) : conditionCode;
+		conditionCode = ((marketCenterOpen || openingAuctionPrint) && isPrimary) ? MdEntity.setCondition(conditionCode, Sale.CONDITION_CODE_OPEN) : conditionCode;
 		if (marketCenterOpen || marketCenterClose || marketCenterCloseUpdate)
 			conditionCode = MdEntity.unsetCondition(conditionCode, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME);
 		return conditionCode;
@@ -301,36 +310,31 @@ public class CtsNormalizer implements IMdNormalizer
 			case ' ':
 				return 0;
 			case '6':
-				return MdEntity.setCondition(0, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME, Sale.CONDITION_CODE_HIGH, Sale.CONDITION_CODE_LOW, Sale.CONDITION_CODE_LAST,
-						Sale.CONDITION_CODE_CLOSE_AUCTION_SUMMARY);
+				return MdEntity.setCondition(0, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME, Sale.CONDITION_CODE_HIGH, Sale.CONDITION_CODE_LOW, Sale.CONDITION_CODE_LAST);
 			case '@':
 			case 'E':
 			case 'F':
 			case 'K':
-			case 'V':
 			case 'X':
 			case '5':
 				return MdEntity.setCondition(0, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME, Sale.CONDITION_CODE_HIGH, Sale.CONDITION_CODE_LOW, Sale.CONDITION_CODE_LAST);
 			case 'B':
+			case 'H':
 			case 'N':
+			case 'V':
+			case '7':
 				return MdEntity.setCondition(0, Sale.CONDITION_CODE_VOLUME);
 			case 'C':
 			case 'I':
 			case 'R':
 				return MdEntity.setCondition(0, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME);
-			case 'H':
-				return MdEntity.setCondition(0, Sale.CONDITION_CODE_VOLUME);
 			case 'L':
 				if (noteTwo)
 					return MdEntity.setCondition(0, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME, Sale.CONDITION_CODE_HIGH, Sale.CONDITION_CODE_LOW,
 							Sale.CONDITION_CODE_LAST);
 				return MdEntity.setCondition(0, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME, Sale.CONDITION_CODE_HIGH, Sale.CONDITION_CODE_LOW);
 			case 'O':
-				if (noteOne)
-					return MdEntity.setCondition(0, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME, Sale.CONDITION_CODE_HIGH, Sale.CONDITION_CODE_LOW,
-							Sale.CONDITION_CODE_LAST, Sale.CONDITION_CODE_OPEN_AUCTION_SUMMARY);
-				return MdEntity.setCondition(0, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME, Sale.CONDITION_CODE_HIGH, Sale.CONDITION_CODE_LOW,
-						Sale.CONDITION_CODE_OPEN_AUCTION_SUMMARY);
+				return MdEntity.setCondition(0, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME, Sale.CONDITION_CODE_HIGH, Sale.CONDITION_CODE_LOW, Sale.CONDITION_CODE_LAST);
 			case 'P':
 				if (noteOne)
 					return MdEntity.setCondition(0, Sale.CONDITION_CODE_VWAP, Sale.CONDITION_CODE_VOLUME, Sale.CONDITION_CODE_HIGH, Sale.CONDITION_CODE_LOW,

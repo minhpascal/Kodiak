@@ -61,6 +61,17 @@ public class ByteBufferUtil
 		return val;
 	}
 
+	public static long readBase95Long(ByteBuffer buffer, int length)
+	{
+		long val = 0;
+		for (int i = 0; i < length; i++)
+		{
+			int chVal = buffer.get() - ' ';
+			val = val * 95 + chVal;
+		}
+		return val;
+	}
+
 	public static void putChar(ByteBuffer buffer, char character)
 	{
 		buffer.put((byte) character);

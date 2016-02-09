@@ -43,11 +43,11 @@ public class OpraNormalizer implements IMdNormalizer
 	private final byte[] tmpBuffer4;
 	private final byte[] tmpBuffer5;
 
-	public OpraNormalizer(Map<MdServiceType, IMdLibraryCallback> callbacks, String range, int channel)
+	public OpraNormalizer(Map<MdServiceType, IMdLibraryCallback> callbacks, String range, int channel, int index)
 	{
-		this.nbbos = new NbboQuoteCache((IMdQuoteListener) callbacks.get(MdServiceType.NBBO), MdFeed.OPRA, range, channel);
-		this.bbos = new BboQuoteCache((IMdQuoteListener) callbacks.get(MdServiceType.BBO), MdFeed.OPRA, range, channel);
-		this.sales = new SaleCache((IMdSaleListener) callbacks.get(MdServiceType.SALE), MdFeed.OPRA, range, channel, true);
+		this.nbbos = new NbboQuoteCache((IMdQuoteListener) callbacks.get(MdServiceType.NBBO), MdFeed.OPRA, range, channel, index);
+		this.bbos = new BboQuoteCache((IMdQuoteListener) callbacks.get(MdServiceType.BBO), MdFeed.OPRA, range, channel, index);
+		this.sales = new SaleCache((IMdSaleListener) callbacks.get(MdServiceType.SALE), MdFeed.OPRA, range, channel, index, true);
 		this.tmpBuffer4 = new byte[4];
 		this.tmpBuffer5 = new byte[5];
 	}
@@ -62,6 +62,7 @@ public class OpraNormalizer implements IMdNormalizer
 	public void processMessage(String processorName, MdFeedPacket packet, boolean shouldIgnore)
 	{
 		OpraPacket opraPacket = (OpraPacket) packet;
+		long timestamp = opraPacket.getTimestamp();
 		ByteBuffer buffer = opraPacket.getBuffer();
 		char participantId = (char) buffer.get();
 		char category = (char) buffer.get();
@@ -96,7 +97,7 @@ public class OpraNormalizer implements IMdNormalizer
 			// Update BBO
 			boolean excludedFromNbbo = indicator == ' ';
 			int conditionCode = MdEntity.setCondition(0, Quote.CONDITION_EXCLUDED_FROM_NBBO);
-			this.bbos.updateBidAndOffer(symbol, exchange, bidPrice, bidSize, offerPrice, offerSize, opraPacket.getTimestamp(), conditionCode);
+			this.bbos.updateBidAndOffer(symbol, exchange, bidPrice, bidSize, offerPrice, offerSize, timestamp, timestamp, conditionCode);
 			if (excludedFromNbbo) return;
 
 			// Update NBBO
@@ -113,63 +114,63 @@ public class OpraNormalizer implements IMdNormalizer
 				case 'A':
 					break;
 				case 'B':
-					this.nbbos.updateOffer(symbol, offerPrice, offerSize, exchange, opraPacket.getTimestamp(), indicator);
+					this.nbbos.updateOffer(symbol, offerPrice, offerSize, exchange, timestamp, timestamp, indicator);
 					break;
 				case 'C':
 					bestOfferExchange = getExchange((char) buffer.get());
 					bestOfferDenominatorCode = (char) buffer.get();
 					bestOfferPrice = getPrice(buffer.getInt(), bestOfferDenominatorCode);
 					bestOfferSize = (int) ByteBufferUtil.getUnsignedInt(buffer);
-					this.nbbos.updateOffer(symbol, bestOfferPrice, bestOfferSize, bestOfferExchange, opraPacket.getTimestamp(), indicator);
+					this.nbbos.updateOffer(symbol, bestOfferPrice, bestOfferSize, bestOfferExchange, timestamp, timestamp, indicator);
 					break;
 				case 'D':
-					this.nbbos.updateOffer(symbol, 0, 0, null, opraPacket.getTimestamp(), indicator);
+					this.nbbos.updateOffer(symbol, 0, 0, null, timestamp, timestamp, indicator);
 					break;
 				case 'E':
-					this.nbbos.updateBid(symbol, bidPrice, bidSize, exchange, opraPacket.getTimestamp(), indicator);
+					this.nbbos.updateBid(symbol, bidPrice, bidSize, exchange, timestamp, timestamp, indicator);
 					break;
 				case 'F':
-					this.nbbos.updateBidAndOffer(symbol, bidPrice, bidSize, exchange, offerPrice, offerSize, exchange, opraPacket.getTimestamp(), indicator);
+					this.nbbos.updateBidAndOffer(symbol, bidPrice, bidSize, exchange, offerPrice, offerSize, exchange, timestamp, timestamp, indicator);
 					break;
 				case 'G':
 					bestOfferExchange = getExchange((char) buffer.get());
 					bestOfferDenominatorCode = (char) buffer.get();
 					bestOfferPrice = getPrice(buffer.getInt(), bestOfferDenominatorCode);
 					bestOfferSize = (int) ByteBufferUtil.getUnsignedInt(buffer);
-					this.nbbos.updateBidAndOffer(symbol, bidPrice, bidSize, exchange, bestOfferPrice, bestOfferSize, bestOfferExchange, opraPacket.getTimestamp(), indicator);
+					this.nbbos.updateBidAndOffer(symbol, bidPrice, bidSize, exchange, bestOfferPrice, bestOfferSize, bestOfferExchange, timestamp, timestamp, indicator);
 					break;
 				case 'H':
-					this.nbbos.updateBidAndOffer(symbol, bidPrice, bidSize, exchange, 0, 0, null, opraPacket.getTimestamp(), indicator);
+					this.nbbos.updateBidAndOffer(symbol, bidPrice, bidSize, exchange, 0, 0, null, timestamp, timestamp, indicator);
 					break;
 				case 'I':
-					this.nbbos.updateBid(symbol, 0, 0, null, opraPacket.getTimestamp(), indicator);
+					this.nbbos.updateBid(symbol, 0, 0, null, timestamp, timestamp, indicator);
 					break;
 				case 'J':
-					this.nbbos.updateBidAndOffer(symbol, 0, 0, null, offerPrice, offerSize, exchange, opraPacket.getTimestamp(), indicator);
+					this.nbbos.updateBidAndOffer(symbol, 0, 0, null, offerPrice, offerSize, exchange, timestamp, timestamp, indicator);
 					break;
 				case 'K':
 					bestOfferExchange = getExchange((char) buffer.get());
 					bestOfferDenominatorCode = (char) buffer.get();
 					bestOfferPrice = getPrice(buffer.getInt(), bestOfferDenominatorCode);
 					bestOfferSize = (int) ByteBufferUtil.getUnsignedInt(buffer);
-					this.nbbos.updateBidAndOffer(symbol, 0, 0, null, bestOfferPrice, bestOfferSize, bestOfferExchange, opraPacket.getTimestamp(), indicator);
+					this.nbbos.updateBidAndOffer(symbol, 0, 0, null, bestOfferPrice, bestOfferSize, bestOfferExchange, timestamp, timestamp, indicator);
 					break;
 				case 'L':
-					this.nbbos.updateBidAndOffer(symbol, 0, 0, null, 0, 0, null, opraPacket.getTimestamp(), indicator);
+					this.nbbos.updateBidAndOffer(symbol, 0, 0, null, 0, 0, null, timestamp, timestamp, indicator);
 					break;
 				case 'M':
 					bestBidExchange = getExchange((char) buffer.get());
 					bestBidDenominatorCode = (char) buffer.get();
 					bestBidPrice = getPrice(buffer.getInt(), bestBidDenominatorCode);
 					bestBidSize = (int) ByteBufferUtil.getUnsignedInt(buffer);
-					this.nbbos.updateBid(symbol, bestBidPrice, bestBidSize, bestBidExchange, opraPacket.getTimestamp(), indicator);
+					this.nbbos.updateBid(symbol, bestBidPrice, bestBidSize, bestBidExchange, timestamp, timestamp, indicator);
 					break;
 				case 'N':
 					bestBidExchange = getExchange((char) buffer.get());
 					bestBidDenominatorCode = (char) buffer.get();
 					bestBidPrice = getPrice(buffer.getInt(), bestBidDenominatorCode);
 					bestBidSize = (int) ByteBufferUtil.getUnsignedInt(buffer);
-					this.nbbos.updateBidAndOffer(symbol, bestBidPrice, bestBidSize, bestBidExchange, offerPrice, offerSize, exchange, opraPacket.getTimestamp(), indicator);
+					this.nbbos.updateBidAndOffer(symbol, bestBidPrice, bestBidSize, bestBidExchange, offerPrice, offerSize, exchange, timestamp, timestamp, indicator);
 					break;
 				case 'O':
 					bestBidExchange = getExchange((char) buffer.get());
@@ -180,7 +181,7 @@ public class OpraNormalizer implements IMdNormalizer
 					bestOfferDenominatorCode = (char) buffer.get();
 					bestOfferPrice = getPrice(buffer.getInt(), bestOfferDenominatorCode);
 					bestOfferSize = (int) ByteBufferUtil.getUnsignedInt(buffer);
-					this.nbbos.updateBidAndOffer(symbol, bestBidPrice, bestBidSize, bestBidExchange, bestOfferPrice, bestOfferSize, bestOfferExchange, opraPacket.getTimestamp(),
+					this.nbbos.updateBidAndOffer(symbol, bestBidPrice, bestBidSize, bestBidExchange, bestOfferPrice, bestOfferSize, bestOfferExchange, timestamp, timestamp,
 							indicator);
 					break;
 				case 'P':
@@ -188,7 +189,7 @@ public class OpraNormalizer implements IMdNormalizer
 					bestBidDenominatorCode = (char) buffer.get();
 					bestBidPrice = getPrice(buffer.getInt(), bestBidDenominatorCode);
 					bestBidSize = (int) ByteBufferUtil.getUnsignedInt(buffer);
-					this.nbbos.updateBidAndOffer(symbol, bestBidPrice, bestBidSize, bestBidExchange, 0, 0, null, opraPacket.getTimestamp(), indicator);
+					this.nbbos.updateBidAndOffer(symbol, bestBidPrice, bestBidSize, bestBidExchange, 0, 0, null, timestamp, timestamp, indicator);
 					break;
 				default:
 					break;
@@ -209,7 +210,7 @@ public class OpraNormalizer implements IMdNormalizer
 			ByteBufferUtil.advancePosition(buffer, 8); // trade identifier + reserved
 			int saleCondition = getSaleCondition(type);
 			symbol = createSymbol(symbol, expMonth, expDay, expYear, strikePrice);
-			this.sales.updateWithSaleCondition(symbol, price, volume, exchange, opraPacket.getTimestamp(), saleCondition, String.valueOf(type));
+			this.sales.updateWithSaleCondition(symbol, price, volume, exchange, timestamp, timestamp, saleCondition, String.valueOf(type));
 		}
 		else if (category == CATEGORY_OPEN_INTEREST)
 		{
@@ -222,7 +223,7 @@ public class OpraNormalizer implements IMdNormalizer
 			double strikePrice = getPrice(buffer.getInt(), strikePriceDenominator);
 			long openInterest = ByteBufferUtil.getUnsignedInt(buffer);
 			symbol = createSymbol(symbol, expMonth, expDay, expYear, strikePrice);
-			this.sales.updateOpenInterest(symbol, openInterest, opraPacket.getTimestamp(), "OI");
+			this.sales.updateOpenInterest(symbol, openInterest, timestamp, timestamp, "OI");
 		}
 		else if (category == CATEGORY_EQUITY_AND_INDEX_EOD_SUMMARY)
 		{
@@ -242,7 +243,7 @@ public class OpraNormalizer implements IMdNormalizer
 			double lastPrice = getPrice(buffer.getInt(), premiumPriceDenominator);
 			ByteBufferUtil.advancePosition(buffer, 21); // net change, underlying price info
 			symbol = createSymbol(symbol, expMonth, expDay, expYear, strikePrice);
-			this.sales.updateEndofDay(symbol, volume, openInterest, openPrice, highPrice, lowPrice, lastPrice, opraPacket.getTimestamp());
+			this.sales.updateEndofDay(symbol, volume, openInterest, openPrice, highPrice, lowPrice, lastPrice, timestamp, timestamp);
 		}
 		else if (category == CATEGORY_ADMINISTRATIVE)
 		{

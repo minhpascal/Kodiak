@@ -38,10 +38,11 @@ public class PsxNormalizer implements IMdNormalizer
 	private final ImbalanceCache imbalanceCache;
 	private final byte[] tmpBuffer;
 
-	public PsxNormalizer(Map<MdServiceType, IMdLibraryCallback> callbacks, String range, int channel)
+	public PsxNormalizer(Map<MdServiceType, IMdLibraryCallback> callbacks, String range, int channel, int index)
 	{
-		this.bookCache = new BookQuoteCache((IMdBookQuoteListener) callbacks.get(MdServiceType.BOOK_XPSX), MdFeed.PSX, MdServiceType.BOOK_XPSX, range, channel);
-		this.imbalanceCache = new ImbalanceCache((IMdImbalanceListener) callbacks.get(MdServiceType.IMBALANCE_XPSX), MdFeed.PSX, MdServiceType.IMBALANCE_XPSX, range, channel);
+		this.bookCache = new BookQuoteCache((IMdBookQuoteListener) callbacks.get(MdServiceType.BOOK_XPSX), MdFeed.PSX, MdServiceType.BOOK_XPSX, range, channel, index);
+		this.imbalanceCache = new ImbalanceCache((IMdImbalanceListener) callbacks.get(MdServiceType.IMBALANCE_XPSX), MdFeed.PSX, MdServiceType.IMBALANCE_XPSX, range, channel,
+				index);
 		this.tmpBuffer = new byte[8];
 	}
 

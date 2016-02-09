@@ -9,10 +9,9 @@ import org.junit.Test;
 
 import com.clearpool.common.util.DateUtil;
 
+@SuppressWarnings("static-method")
 public class ByteBufferUtilTest
 {
-
-	@SuppressWarnings("static-method")
 	@Test
 	public void testGetUnsignedLong()
 	{
@@ -22,5 +21,19 @@ public class ByteBufferUtilTest
 		buffer.flip();
 		ByteBufferUtil.advancePosition(buffer, 2);
 		assertEquals(nanosSinceMidnight, ByteBufferUtil.getUnsignedLong(buffer, 6));
+	}
+
+	@Test
+	public void testReadBase95Long()
+	{
+		ByteBuffer buffer = ByteBuffer.allocate(6);
+		buffer.put((byte) '!');
+		buffer.put((byte) 'q');
+		buffer.put((byte) 'k');
+		buffer.put((byte) 'J');
+		buffer.put((byte) 'r');
+		buffer.put((byte) 'C');
+		buffer.flip();
+		assertEquals(14400000000l, ByteBufferUtil.readBase95Long(buffer, 6));
 	}
 }
